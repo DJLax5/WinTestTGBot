@@ -6,7 +6,7 @@ from enum import Enum
 
 
 class WinTestHandler:
-    ''' This class provides the handling of wintest messages. '''
+    ''' This class provides the handling of wintest messages, reception and infusing the wintest network with additional messages. '''
 
     class InvalidStationLengthException(Exception):
         ''' Raised when it's tried to send a message with a invalid station length '''
@@ -29,13 +29,14 @@ class WinTestHandler:
         '''  Constructor to setup the handler. '''
         self.newMessageHandler = newMessageHandler
         self.opChangeHandler = opChangeHandler 
+        # setup the flags
         self._stop_event = False
-        self._running = False
+        self.running = False
         self._thread = None
         self._wdTherad = None
         self.wdFlag = False
-        self._last_packet = time.time()
-        self._ownMessages = []
+        self._last_packet = 0.0
+        self._ownMessages = [] # as we send our own messages to a broadcast IP, we will receive our own messages aswell. Use this list to filter incoming messages
         # Find the IP of this machine which is within the WinTest Subnet
         hostname = socket.gethostname()
         ip_addresses = socket.gethostbyname_ex(hostname)[2]
@@ -60,17 +61,18 @@ class WinTestHandler:
     def start(self):
         ''' Function to start the event loop, this will start listening to incoming packets. Returns True if the start was successfull, Flase otherwise '''
         self._stop_event = False
-        if self._running == False:
+        if self.running == False:
             cf.log.debug('[WT] Start event')
             self._thread = threading.Thread(target=self.listen)
             self._thread.start()
             startT = time.time()
-            while self._running == False:
+            while self.running == False:
                 if time.time() - startT > 10:
                     cf.log.error('[WT] Network listener did not start within 10 seconds! Aborting.')
                     self.stop()
                     return False
                 time.sleep(0.1)
+            # Start the watchdog, set is as triggered
             self.wdFlag = True
             self._last_packet = 0.0
             self._wdTherad = threading.Thread(target=self.watchdog)
@@ -79,7 +81,7 @@ class WinTestHandler:
         return False
 
     def stop(self):
-        ''' Function to stio the event loop, this will try to join the thread, this function may wait up to 5 sec. '''
+        ''' Function to stio the event loop, this will try to join the thread, this function may wait up to 7 sec. '''
         self._stop_event = True
         cf.log.debug('[WT] Stop event')
         try:
@@ -100,10 +102,10 @@ class WinTestHandler:
             raise 
         finally:
             self._stop_event = False
-            self._running = False
+            self.running = False
 
-        sock.setblocking(0)
-        self._running = True
+        sock.setblocking(0) # non-blocking performacne allows for gracefully shutdowns
+        self.running = True
 
         try:
             while self._stop_event == False:
@@ -112,10 +114,10 @@ class WinTestHandler:
                     data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
                     cf.log.debug("[WT] Received message: %s" % data)
 
-                    if data in self._ownMessages:
+                    if data in self._ownMessages: # It's one of our own, ignore
                         continue
 
-                    # The last byte is always the 0 byte
+                    # The last byte is always the 0 byte, check it
                     if data[-1] != 0:
                         cf.log.warn('[WT] Received message is not in the correct format!')
                         continue
@@ -159,14 +161,14 @@ class WinTestHandler:
         finally:
             sock.close()
             self._stop_event = False
-            self._running = False
+            self.running = False
         cf.log.info('[WT] WinTest Listening stopped')
 
 
     def watchdog(self):
         ''' Simple watchdog which will alert when WT stops sending Heartbeats'''
 
-        while self._running:
+        while self.running:
             if time.time() - self._last_packet > float(os.getenv('WT_WD_TIMEOUT')):
                 if self.wdFlag == False:
                     cf.log.warn('[WT] Watchdog timeout! WinTest Heartbeat missing!') # TODO: Maybe do more... 
@@ -194,12 +196,12 @@ class WinTestHandler:
         # build cmd
         cmd = 'GAB: "' + source + '" "" "' + message + '"'
         cmd = self.toUDPmsg(cmd) # encode and append checksum
-
+        self._ownMessages.append(cmd)
         # Sendit
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
             sock.sendto(cmd, (os.getenv('BROADCAST_IP'),int(os.getenv('BROADCAST_PORT'))))
-            self._ownMessages.append(cmd)
+            
         except Exception as e:
             cf.log.error('[WT] Could not send message! Reason: ' + str(e))
 

@@ -1,0 +1,6 @@
+{
+    "LANGUAGE" : "deutsch",
+    "BOT_STATION" : "TG BOT",
+    "WT_BOOT_MSG" : "Der WinTest Telegram-Bot ist nun aktiv!",
+    "WT_SHUTDOWN_MSG": "Der WinTest Telegram-Bot fährt runter..."
+}

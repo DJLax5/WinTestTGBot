@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import logging
 import json
+from MuliLanguageMessages import MulitLanguageMessages
 
 def setupLogging():
     # Set up the logger with file and console handlers
@@ -32,5 +33,7 @@ log = setupLogging()
 # Database
 #TODO: os.makedirs(os.path.dirname(os.getenv('DATABASE_FILE_PATH')), exist_ok=True)
 
+# Multiple Languages:
+ml = MulitLanguageMessages()
 
 log.info('[CONFIG] Sytsem Started, Configuration loaded!')
