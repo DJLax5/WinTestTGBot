@@ -1,9 +1,11 @@
 # This is the demo environment file. Rename this file to .env and set your values
 
-BRAODCAST_IP="192.168.0.255" # The IP set in WT in the Interface Menu
-BORADCAST_PORT=9871 # The IP set in WT in the Interface Menu
+BROADCAST_IP="192.168.0.255" # The IP set in WT in the Interface Menu
+BROADCAST_PORT=9871 # The IP set in WT in the Interface Menu
+WINTEST_SUBNET="255.255.255.0" # The subnet for the Network in which wintest is used. Probably no need to change this
 TELEGRAM_TOKEN="12345" # Token to connect to Telegram
 MAGIC_KEY="secret" # Secret key to authenticate users to be validated
+
 
 # The following keys can be modified but also left as-is
 
