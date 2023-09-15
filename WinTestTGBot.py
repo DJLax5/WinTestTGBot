@@ -1,5 +1,6 @@
 import config as cf
 from WinTestHandler import WinTestHandler
+from TelegramChatManager import TelegramChatManager
 import os, code, time, threading, sys
 
 class WinTestTGBot:
@@ -16,6 +17,8 @@ class WinTestTGBot:
         self.defaultLang = os.getenv('DEFAULT_LANG')
         self.wtBOTname = cf.ml.getMessage(self.defaultLang, 'BOT_STATION')
 
+        self.tcm = TelegramChatManager(self.publishMessage)
+
         self._stop_event = False
 
     def start(self):
@@ -24,6 +27,8 @@ class WinTestTGBot:
         if not self.wt.start():
             self.log.fatal('[BOT] Could not start WinTestHandler')
             return False
+        
+       
 
         try:
             while self.wt.wdFlag == True: # wait until we got a heartbeat from wintest,
@@ -42,12 +47,14 @@ class WinTestTGBot:
         except WinTestHandler.InvalidStationLengthException as ls:        
             cf.log.error('[BOT] Cannot send power-up message to WT, Station Length Error!')
 
+        self.tcm.start()
+
         return True
 
     def stop(self):
         ''' Top-level stop function. This will gracefully stop all threads and handlers '''
         self._stop_event = True
-
+        self.tcm.stop()
         # Stop the WinTest Handler, send a goodbye message
         if self.wt.running:
             try:
@@ -63,7 +70,12 @@ class WinTestTGBot:
 
     def incomingWTMessage(self, station, message):
         ''' If a WinTest Chat Message was captured, and parsed, handle it. '''
-        print(station, message)
+        chat_msg = station + ((' / ' + self.stations[station]) if self.stations.get(station) else '')
+        chat_msg += ':\n'
+        chat_msg += message
+        #for chatID in self.chats:
+        self.tcm.sendMessage('402776996', chat_msg) 
+        
 
     def opChangeOnStation(self, station, call=''):
         ''' If a OP-Change on a station was detected, mark it. To OP-OFF a station, leave the call empty.'''
@@ -71,6 +83,15 @@ class WinTestTGBot:
         self.stations[station] = call
         cf.log.debug('[BOT] Stations update: '+ str(self.stations))
 
+    def publishMessage(self, origin, message):
+        try:
+            self.wt.sendToWT(os.getenv('WT_CALL_PREFIX') + origin + os.getenv('WT_CALL_SUFFIX'),message)
+        except UnicodeEncodeError as e: # There are exception, just put them into the log and be done with them
+            pass
+        except WinTestHandler.InvalidMessageLengthException as lm:
+            pass
+        except WinTestHandler.InvalidStationLengthException as ls:        
+            pass
 
 class StopInterrupt(threading.Event):
     ''' A dummy event which will just wait. This allows to stay the start thread present.'''

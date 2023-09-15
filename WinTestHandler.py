@@ -92,7 +92,7 @@ class WinTestHandler:
 
     def listen(self):
         ''' Listening thread function. This will wait for incoming packets and call the corresponding event handlers. Stopped by the stop() function. '''
-        cf.log.info('[WT] WinTest Listening started')
+        cf.log.info('[WT] WinTest listening started')
         
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
@@ -162,7 +162,7 @@ class WinTestHandler:
             sock.close()
             self._stop_event = False
             self.running = False
-        cf.log.info('[WT] WinTest Listening stopped')
+        cf.log.info('[WT] WinTest listening stopped')
 
 
     def watchdog(self):
