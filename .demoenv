@@ -21,3 +21,4 @@ WT_MSG_LIMIT=79 # Max. no. of characters of a message
 WT_CALL_PREFIX="" # Prefix added to user calls
 WT_CALL_SUFFIX="/TG" # Suffix added to user calls
 WT_WD_TIMEOUT=120 # Wintest Heartbeat Watchdog Timeout in seconds
+TG_CONFIRM_DEFAULT="True" # Defines weather the bot confirms sucessfull messages by default

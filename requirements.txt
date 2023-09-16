@@ -1,4 +1,3 @@
 numpy
 python-dotenv
-requests
 python-telegram-bot

@@ -37,7 +37,7 @@ class WinTestHandler:
         self.wdFlag = False
         self._last_packet = 0.0
         self._ownMessages = [] # as we send our own messages to a broadcast IP, we will receive our own messages aswell. Use this list to filter incoming messages
-        # Find the IP of this machine which is within the WinTest Subnet
+        # Find the IP of this machine which is within the Win-Test Subnet
         hostname = socket.gethostname()
         ip_addresses = socket.gethostbyname_ex(hostname)[2]
 
@@ -52,10 +52,10 @@ class WinTestHandler:
             ip = ipaddress.ip_address(ip_str)
             if int(ip) & int(subnet_mask) == network_address:
                 self.ip = ip_str
-                cf.log.info('[WT] Found Network interface/ip to communicate with WinTest, using ' + ip_str)
+                cf.log.info('[WT] Found Network interface/ip to communicate with Win-Test, using ' + ip_str)
     
         if self.ip == '':
-            cf.log.fatal('[WT] This machine has no ip address in the same subnet as WinTest, unable to execute.')
+            cf.log.fatal('[WT] This machine has no ip address in the same subnet as Win-Test, unable to execute.')
             raise WinTestHandler.IPNotFoundException()
 
     def start(self):
@@ -92,7 +92,7 @@ class WinTestHandler:
 
     def listen(self):
         ''' Listening thread function. This will wait for incoming packets and call the corresponding event handlers. Stopped by the stop() function. '''
-        cf.log.info('[WT] WinTest listening started')
+        cf.log.info('[WT] Win-Test listening started')
         
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
@@ -119,7 +119,7 @@ class WinTestHandler:
 
                     # The last byte is always the 0 byte, check it
                     if data[-1] != 0:
-                        cf.log.warn('[WT] Received message is not in the correct format!')
+                        cf.log.warning('[WT] Received message is not in the correct format!')
                         continue
 
                     # Extract message, expected checksum and received checksum
@@ -129,7 +129,7 @@ class WinTestHandler:
                     
                     # chek the sum
                     if expChecksum != chkSum:
-                        cf.log.warn('[WT] Wrong checksum received!')
+                        cf.log.warning('[WT] Wrong checksum received!')
                         continue
                 
                     # reset watchdog
@@ -162,31 +162,31 @@ class WinTestHandler:
             sock.close()
             self._stop_event = False
             self.running = False
-        cf.log.info('[WT] WinTest listening stopped')
+        cf.log.info('[WT] Win-Test listening stopped')
 
 
     def watchdog(self):
-        ''' Simple watchdog which will alert when WT stops sending Heartbeats'''
+        ''' Simple watchdog which will alert when WT stops sending heartbeats'''
 
         while self.running:
             if time.time() - self._last_packet > float(os.getenv('WT_WD_TIMEOUT')):
                 if self.wdFlag == False:
-                    cf.log.warn('[WT] Watchdog timeout! WinTest Heartbeat missing!') # TODO: Maybe do more... 
+                    cf.log.warning('[WT] Watchdog timeout! Win-Test heartbeat missing!') # TODO: Maybe do more... 
                     self.wdFlag = True
             elif self.wdFlag == True:
                 self.wdFlag = False
-                cf.log.info('[WT] Got WinTest Heartbeat')
+                cf.log.info('[WT] Got Win-Test heartbeat')
             time.sleep(1)
         self.wdFlag = False
 
 
     def sendToWT(self, source, message):
-        ''' Function to send a message to WinTest as a station `source` 
+        ''' Function to send a message to Win-Test as a station `source` 
         Raises:InvalidStationLengthException, InvalidMessageLengthException, UnicodeEncodeErrorException '''
 
         if len(source) > int(os.getenv('WT_STN_LIMIT')):
             raise WinTestHandler.InvalidStationLengthException()
-        if len(source) > int(os.getenv('WT_MSG_LIMIT')):
+        if len(message) > int(os.getenv('WT_MSG_LIMIT')):
             raise WinTestHandler.InvalidMessageLengthException()
 
         # Now escape special characters for wintest
@@ -207,7 +207,7 @@ class WinTestHandler:
 
     @staticmethod
     def escapeWT(msg):
-        ''' Function to escape the special WinTest encoding scheme '''
+        ''' Function to escape the special Win-Test encoding scheme '''
         # First handle special characters
         msg = msg.replace('\\', '\\\\')
         msg = msg.replace('"', '\\"')
@@ -227,7 +227,7 @@ class WinTestHandler:
 
     @staticmethod
     def deescapeWT(msg):
-        ''' Function to de-escape the special WinTest encoding scheme '''
+        ''' Function to de-escape the special Win-Test encoding scheme '''
 
         # First replace the special characters
         msg = msg.replace('\\"', '"')

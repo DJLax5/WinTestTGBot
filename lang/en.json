@@ -1,6 +1,27 @@
 {
     "LANGUAGE" : "english",
     "BOT_STATION" : "TG BOT",
-    "WT_BOOT_MSG" : "The WinTest-Telegram Bot is now active!",
-    "WT_SHUTDOWN_MSG": "The WinTest-Telegram Bot is shutting down..."
+    "YES" : "yes",
+    "NO" : "no",
+    "ON" : "on",
+    "OFF" : "off",
+    "WT_BOOT_MSG" : "The Win-Test telegram bot is now active!",
+    "WT_SHUTDOWN_MSG": "The Win-Test telegram bot is shutting down...",
+    "WT_ENCODING_ERROR" : "Sorry, I couldn't pass that message to Win-Test 😕\n\nPlease only use letters from the extended latin alphabet. (That excludes also emojis)",
+    "WT_MSG_LONG_ERROR" : "Sorry, I couldn't pass that message to Win-Test 😕\n\nWin-Test message have a maximum length of [charlimit] characters!",
+    "WT_STN_LONG_ERROR" : "Sorry, I couldn't pass that message to Win-Test 😕\n\nYour Win-Test display name ([stnname]) is too long. The maximum length is [charlimit] characters!",
+    "WT_CONFIRM" : "Message forwarded 👍",
+    "UNKNOWN_ERROR" : "An unexpected error arose. Please contact your Bot-Manager.",
+    "REQUEST_WTNAME" : "Hi [name]!\n\nIt seems you have not set a Win-Test display name. Please to so, that operators can identify the sender. Use the /name command for that.",
+    "RESTART_VALID" : "I am already started and ready to go in this chat! Use /help to show additional info.",
+    "RESTART_UNVALID" : "I am already started in this chat. However, this chat is not activated. Please respond with /verify [SECRET KEY] to activate this chat. \n\nYou will get the secret key from this bot's manager.",
+    "WELCOME_PRIVATE" : "Hi [name]!\nNice to meet you! I am a Telegram bot which builds a bridge between Win-Test's chat and telegram. With me, you can receive and send chat messages from and to Win-Test during a contest!\n\nTo get started, you'll need to verify yourself. In order to so so, please use /verify [SECRET_KEY]\nYou will get the secret key from your bot manager.",
+    "WELCOME_GROUP" : "Hi everyone!\nI am a Telegram bot which builds a bridge between Win-Test's chat and telegram. With me, you can receive and send chat messages from and to Win-Test during a contest!\n\nTo get started, you'll need to verify this chat. In order to so so, please use /verify [SECRET_KEY]\nYou will get the secret key from your bot manager.",
+    "UNKNOWN_CHAT_ERROR" : "Oops, it seems I have no data about this conversation. Please start a conversation using /start.",
+    "INVALID_VERIFY_SYNTAX" : "The correct syntax for this command is:\n/verify [SECRET KEY]\nPlease try again.",
+    "VERIFY_SUCCESS_PRIVATE" : "Verification successfull!\n\nFrom now on, new Win-Test chat messages will appear here. In order to send a message to Win-Test, just write a message in this chat. \nFor additional commands, see /help\n\nI suggest you set your Win-Test display name. If you set it equal to your callsign you use to OPON into Win-Test, I can identify you as operator and not send your own messages into this chat.",
+    "VERIFY_SUCCESS_GROUP" : "Verification successfull!\n\nI will relay Win-Test messages into this goup chat. In order to send messages to Win-Test, start your message with @[botuname].\n\nEveryone of you can set a Win-Test display name using /name\nThis allows the operators to identify the author of the messages. If you plan to operate, set this name to your Win-Test OPON callsign.",    
+    "VERIFY_FAILED" : "Sorry that key was not correct. Please try again. Make sure you don't accidentally send spaces in the message.",
+    "NOT_VALID_ERROR" : "Sorry, this chat is not verified. Please do so via the /verify [SECRET_KEY] command."
+    
 }

@@ -41,8 +41,12 @@ class MulitLanguageMessages:
         if vars:
             for key, value in vars.items():
                 if f"[{key}]" not in message:
-                    cf.log.warn('[ML] The variable ' + key + ' is not present in the message-id ' + msg_id + ' of languagepack ' + langcode)
+                    cf.log.warning('[ML] The variable ' + key + ' is not present in the message-id ' + msg_id + ' of languagepack ' + langcode)
                 else:
                     message = message.replace(f"[{key}]", str(value))
         
         return message
+
+    def languageSupported(self, langcode):
+        ''' Simple check weather a language code exists'''
+        return self.MESSAGES.get(langcode) != None

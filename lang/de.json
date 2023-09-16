@@ -1,6 +1,26 @@
 {
     "LANGUAGE" : "deutsch",
     "BOT_STATION" : "TG BOT",
-    "WT_BOOT_MSG" : "Der WinTest Telegram-Bot ist nun aktiv!",
-    "WT_SHUTDOWN_MSG": "Der WinTest Telegram-Bot fährt runter..."
+    "YES" : "ja",
+    "NO" : "nein",
+    "ON" : "ein",
+    "OFF" : "aus",
+    "WT_BOOT_MSG" : "Der Win-Test Telegram-Bot ist nun aktiv!",
+    "WT_SHUTDOWN_MSG": "Der Win-Test Telegram-Bot fährt runter...",
+    "WT_ENCODING_ERROR" : "Tut mir leid, ich konnte diese Nachricht nicht an Win-Test weiterleiten 😕\n\nBitte nutze nur Zeichen des erweiterten lateinischen Alphabets. (Also auch keine Emojis)",
+    "WT_MSG_LONG_ERROR" : "Tut mir leid, ich konnte diese Nachricht nicht an Win-Test weiterleiten 😕\n\nWin-Test Nachrichten haben ein Zeichenlimit von [charlimit] Zeichen!",
+    "WT_STN_LONG_ERROR" : "Tut mir leid, ich konnte diese Nachricht nicht an Win-Test weiterleiten 😕\n\nDein Win-Test Anzeigename ([stnname]) überschreitet das Zeichenlimit von [charlimit] zeichen!",
+    "WT_CONFIRM" : "Nachricht weitergeleitet 👍",
+    "UNKNOWN_ERROR" : "Es trat ein unbekannter Fehler auf. Kontaktiere bitte den Bot-Verantwortlichen.",
+    "REQUEST_WTNAME" : "Hallo [name]!\n\nEs scheint, du hast noch keinen Win-Test Anzeigenamen gesetzt. Bitte hole das mit dem Befehl /name nach. Andernfalls können die OPs dich als Verfasser deiner Nachrichten nicht erkennen.",
+    "RESTART_VALID" : "Ich bin bereits aktiv in diesem Chat. Nutze /help für weitere Infos und Kommandos!",
+    "RESTART_UNVALID" : "Ich bin bereits aktiv in diesem Chat, jedoch noch nicht freigeschaltet. Nutze /verify [PASSWORT] um diesen Chat freizuschalten.\n\nDas Passwort bekommst du vom Bot-Verantwortlichen.",
+    "WELCOME_PRIVATE" : "Hallo [name]!\nIch bin der Win-Test Telegram Bot. Ich bin die Brücke zwischen dem Win-Test Chat und Telegram.\n\nZu Beginn bitte ich dich, dich zu verifizieren. Nutze dazu /verify [PASSWORT]\nDas Passwort bekommst du vom Bot-Verantwortlichen.",
+    "WELCOME_GROUP" : "Hallo zusammen!\nIch bin der Win-Test Telegram Bot. Ich bin die Brücke zwischen dem Win-Test Chat und Telegram.\n\nZu Beginn bitte ich einen von euch, diesen Chat zu verifizieren. Nutzt dazu /verify [PASSWORT]\nDas Passwort bekommst ihr vom Bot-Verantwortlichen.",
+    "UNKNOWN_CHAT_ERROR" : "Oh, es scheint als hätte ich diese Konversation nicht gespeichert. Bitte starte diesen Chat mit /start erneut.",
+    "INVALID_VERIFY_SYNTAX" : "Die korrekte Syntax für diesen Befehl ist:\n/verify [PASSWORT]\nBitte versuche es erneut.",
+    "VERIFY_SUCCESS_PRIVATE" : "Vielen Dank, das war efolgreich!\n\nDieser Bot ist nun einsatzbereit. Für eine Liste an Befehlen nutze /help. \nUm eine Nachricht an Win-Test zu senden, schicke diese einfach direkt an mich. Ich empfehle zuerst einen Win-Test Anzeigenamen festzulegen. Nutze hierfür /name [NAME]\n\nEs ist hilfreich dein Call als Anzeigenamen zu setzten. Dann kann ich diesen Chat und dich als OP in Win-Test zuordnen und dir deine eigenen Win-Test Nachrichten nicht in diesem Chat anzeigen.",
+    "VERIFY_SUCCESS_GROUP" : "Vielen Dank, das war erfolgreich!\n\nIch werde von nun an Win-Test Chatnachrichten in diese Gruppe weiterleiten. Um eine Nachricht an Win-Test zu schicken, beginnt die Nachricht mit @[botuname].\n\nJeder von euch kann einen Win-Test Anzeigenamen mit dem Kommando /name [NAME] festlegen. Damit können die OPs in Win-Test den Autor der Nachricht erkennen. Es ist empfehlenswert seinen Win-Test OPON Call für diesen Namen zu verwenden.",
+    "VERIFY_FAILED" : "Tut mir leid, das Passwort war nicht korrekt. Versuche es erneut. Stelle sicher, dass auch keine versehentlichen Leerzeichen in der Nachricht sind.",
+    "NOT_VALID_ERROR" : "Dieser Chat ist noch nicht verifiziert. Bitte hole das mit /verify [PASSWORT] nach."
 }

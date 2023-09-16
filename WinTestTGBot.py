@@ -28,7 +28,7 @@ class WinTestTGBot:
             self.log.fatal('[BOT] Could not start WinTestHandler')
             return False
         
-       
+        self.tcm.start()       
 
         try:
             while self.wt.wdFlag == True: # wait until we got a heartbeat from wintest,
@@ -47,7 +47,6 @@ class WinTestTGBot:
         except WinTestHandler.InvalidStationLengthException as ls:        
             cf.log.error('[BOT] Cannot send power-up message to WT, Station Length Error!')
 
-        self.tcm.start()
 
         return True
 
@@ -73,25 +72,41 @@ class WinTestTGBot:
         chat_msg = station + ((' / ' + self.stations[station]) if self.stations.get(station) else '')
         chat_msg += ':\n'
         chat_msg += message
-        #for chatID in self.chats:
-        self.tcm.sendMessage('402776996', chat_msg) 
+        
+        # go over each chat
+        for chat in cf.chats:
+
+            if cf.chats[chat]['valid'] == False: # skip uinvalid chats
+                continue
+            # All unmuted chats and chats which are not the current operator get notified
+            if cf.chats[chat]['mute'] == 'none':
+                self.tcm.sendMessage(chat, chat_msg) 
+            elif cf.chats[chat]['is_private'] == True and cf.chats[chat]['mute'] == 'own':
+                if not self.stations.get(station): # we've missed the opon command... well then just send the message
+                    self.tcm.sendMessage(chat, chat_msg) 
+                elif cf.users[cf.chats[chat]['user']]['wt_dispname'] != self.stations[station]:
+                    self.tcm.sendMessage(chat, chat_msg) 
+
         
 
     def opChangeOnStation(self, station, call=''):
-        ''' If a OP-Change on a station was detected, mark it. To OP-OFF a station, leave the call empty.'''
-        
+        ''' If a OP-Change on a station was detected, mark it. To OP-OFF a station, leave the call empty.'''        
         self.stations[station] = call
         cf.log.debug('[BOT] Stations update: '+ str(self.stations))
 
     def publishMessage(self, origin, message):
         try:
-            self.wt.sendToWT(os.getenv('WT_CALL_PREFIX') + origin + os.getenv('WT_CALL_SUFFIX'),message)
-        except UnicodeEncodeError as e: # There are exception, just put them into the log and be done with them
-            pass
+            self.wt.sendToWT(origin,message)
+            return 0
+        except UnicodeEncodeError as e: # There are exception, origin of this message
+            cf.log.warning('[BOT] Message could not be sent, encoding error!')
+            return 1
         except WinTestHandler.InvalidMessageLengthException as lm:
-            pass
-        except WinTestHandler.InvalidStationLengthException as ls:        
-            pass
+            cf.log.warning('[BOT] Message could not be sent, message too long!')
+            return 2
+        except WinTestHandler.InvalidStationLengthException as ls:       
+            cf.log.warning('[BOT] Message could not be sent, station name too long!') 
+            return 3
 
 class StopInterrupt(threading.Event):
     ''' A dummy event which will just wait. This allows to stay the start thread present.'''
@@ -115,5 +130,5 @@ if __name__ == '__main__':
             cf.log.info('[BOT] Keyboard Interrupt, shutting down')
             bot.stop() # Stop the bot gracefully
     else: # if the bot could not be started, stop everything
-        cf.log.fatal('[BOT] The bot could not start correctly!')
+        cf.log.warninging('[BOT] The bot did not start properly!')
         bot.stop() 
