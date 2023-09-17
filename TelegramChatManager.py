@@ -16,13 +16,14 @@ import re
 class TelegramChatManager:
     ''' This class provides the Chat Management used to handle all messages between Telegram and this software'''
 
-    def __init__(self, messageToWThandler):
+    def __init__(self, messageToWThandler, getOPsHandler):
         ''' Construct the chat manager, with an application and the basic push capability '''
         self.bot = telegram.Bot(token=os.getenv('TELEGRAM_TOKEN'))
         self.username = ''
         self._loop = asyncio.new_event_loop()        
         asyncio.set_event_loop(self._loop)
         self.toWT = messageToWThandler
+        self.getOPs = getOPsHandler
         self._thread = None
         self.defaultLang = os.getenv('DEFAULT_LANG')
 
@@ -40,6 +41,15 @@ class TelegramChatManager:
         self.app.add_handler(CommandHandler('verify', self.handleVerify))
         self.app.add_handler(CommandHandler('name', self.handleName))
         self.app.add_handler(CommandHandler('lang', self.handleLang))
+        self.app.add_handler(CommandHandler('mute', self.handleMute))
+        self.app.add_handler(CommandHandler('confirm', self.handleConfirm))
+        self.app.add_handler(CommandHandler('all', self.handleAll))
+        self.app.add_handler(CommandHandler('sudo', self.handleSudo))
+        self.app.add_handler(CommandHandler('leave', self.handleLeave))
+        self.app.add_handler(CommandHandler('show', self.handleShow))
+        self.app.add_handler(CommandHandler('makeleave', self.handleMakeLeave))
+        self.app.add_handler(CommandHandler('loglevel', self.handleLoglevel))
+        self.app.add_handler(CommandHandler('help', self.handleHelp))        
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, self.handleMessage))
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.GROUP & filters.Regex(r'^@'+ self.username + ' '), self.handleGroupMessage))           
         
@@ -103,7 +113,7 @@ class TelegramChatManager:
                 message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'WELCOME_PRIVATE', vars={'name':update.message.from_user.first_name}),version = 2)
             else:
                 langcode = self.defaultLang
-                cf.newChat(chat_id, langcode=langcode, is_private=False)
+                cf.newChat(chat_id, langcode=langcode, is_private=False, groupname = update.message.chat.title)
                 message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'WELCOME_GROUP'),version = 2)
         await update.message.reply_text(message, parse_mode='MarkdownV2')
 
@@ -118,7 +128,7 @@ class TelegramChatManager:
             await update.message.reply_text(message, parse_mode='MarkdownV2')
             return
         langcode = cf.chats[chat_id]['langcode']
-        if await self.sanityCheck(update):
+        if await self.sanityCheck(update, silent = True):
             message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ALREADY_VERIFIED'),version = 2)
             await update.message.reply_text(message, parse_mode='MarkdownV2')
             return
@@ -204,6 +214,240 @@ class TelegramChatManager:
             
         await update.message.reply_text(message, parse_mode='MarkdownV2')
 
+    async def handleMute(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /mute commands. This mutes Win-Test Messages into this chat. '''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            if cf.users.get(user) == None:
+                cf.newUser(user)
+                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+        langcode = cf.chats[chat_id]['langcode']
+
+        if context.args == []:
+            if chat_type == 'private':
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_SYNTAX_PRV'),version = 2)
+            else:
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_SYNTAX_GRP'),version = 2)
+        else:
+            mute = " ".join(context.args).lower()
+            if mute == 'all':
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_ALL'),version = 2)
+                cf.updateChat(chat_id, 'mute', 'all')
+                cf.log.info('[TCM] User ' + user + ' muted a chat.')
+            elif mute == 'own':
+                if chat_type == 'private':
+                    message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_OWN_PRV'),version = 2)
+                    cf.updateChat(chat_id, 'mute', 'own')
+                    cf.log.info('[TCM] User ' + user + ' unmuted his own messages.')
+                else:
+                    message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_OWN_GRP'),version = 2)
+            elif mute == 'none':
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_NONE'),version = 2)
+                cf.updateChat(chat_id, 'mute', 'none')
+                cf.log.info('[TCM] User ' + user + ' unmuted a chat.')
+            else:
+                if chat_type == 'private':
+                    message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_SYNTAX_PRV'),version = 2)
+                else:
+                    message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_SYNTAX_GRP'),version = 2)
+        await update.message.reply_text(message, parse_mode='MarkdownV2')
+
+    async def handleConfirm(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /confirm commands. This enables/disables the confirmation messages weather the Message arrived to Win-Test. '''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            if cf.users.get(user) == None:
+                cf.newUser(user)
+                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+        langcode = cf.chats[chat_id]['langcode']
+        if context.args == []:
+            message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'CONFIRM_SYNTAX'),version = 2)
+        else:
+            newState = " ".join(context.args).lower()
+            if newState == 'on':
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'CONFIRM_ON'),version = 2)
+                cf.updateChat(chat_id, 'wt_confirm', True)
+                cf.log.info('[TCM] User ' + user + ' enabled Win-Test confirmed messages.')
+            elif newState == 'off':
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'CONFIRM_OFF'),version = 2)
+                cf.updateChat(chat_id, 'wt_confirm', False)
+                cf.log.info('[TCM] User ' + user + ' disabled Win-Test confirmed messages.')
+            else:
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'CONFIRM_SYNTAX'),version = 2)
+        await update.message.reply_text(message, parse_mode='MarkdownV2')
+
+    async def handleAll(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /all command. This enables/disables the Telegram to Telegram notifications. (Cross chat notifications) '''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            if cf.users.get(user) == None:
+                cf.newUser(user)
+                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+        langcode = cf.chats[chat_id]['langcode']
+        if context.args == []:
+            message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ALL_SYNTAX'),version = 2)
+        else:
+            newState = " ".join(context.args).lower()
+            if newState == 'on':
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ALL_ON'),version = 2)
+                cf.updateChat(chat_id, 'tg_to_tg', True)
+                cf.log.info('[TCM] User ' + user + ' enabled TG to TG messages.')
+            elif newState == 'off':
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ALL_OFF'),version = 2)
+                cf.updateChat(chat_id, 'tg_to_tg', False)
+                cf.log.info('[TCM] User ' + user + ' disabled TG to TG messages.')
+            else:
+                message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ALL_SYNTAX'),version = 2)
+        await update.message.reply_text(message, parse_mode='MarkdownV2')
+
+    async def handleSudo(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /sudo commands. This makes the current user a Super-User. '''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            
+            
+        langcode = cf.chats[chat_id]['langcode']
+
+        if chat_type != 'private':
+            message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'SUDO_GROUP'),version = 2) 
+            await update.message.reply_text(message, parse_mode='MarkdownV2')
+            return
+        if cf.users[user]['is_superuser'] == True:
+            message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'SUDO_ALREADY'),version = 2) 
+            await update.message.reply_text(message, parse_mode='MarkdownV2')
+            return
+        
+        if context.args == []: # check syntax
+            message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'SUDO_SYNTAX'),version = 2)
+            await update.message.reply_text(message, parse_mode='MarkdownV2')
+            return
+        key = " ".join(context.args)
+        if key == os.getenv('SUPER_USER_KEY'):
+            message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'SUDO_SUCCESS'),version = 2)
+            cf.updateUser(user, 'is_superuser', True)
+            cf.log.info('[TCM] User ' + user + ' is now a superuser.')
+        else:
+            message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'SUDO_FAILED'),version = 2)
+            cf.log.warning('[TCM] Superuser verification failed by user ' + user + ', tried key: ' + key)
+        await update.message.reply_text(message, parse_mode='MarkdownV2')
+
+    async def handleLeave(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /leave commands. This deletes all stored data, without asking!'''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            if cf.users.get(user) == None:
+                cf.newUser(user)
+                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+        
+        langcode = cf.chats[chat_id]['langcode']
+        cf.remove(chat_id)      
+        
+        message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'LEAVE_SUCCESS'),version = 2)
+        await update.message.reply_text(message, parse_mode='MarkdownV2')
+    
+    async def handleShow(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /show commands. This displays all stored data to super users. '''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            if cf.users.get(user) == None:
+                cf.newUser(user)
+                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+        langcode = cf.chats[chat_id]['langcode']
+        cf.log.error('[TCM] Function not implemented.')
+
+    async def handleMakeLeave(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /makeleave commands. This allows super users to remove users. '''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            if cf.users.get(user) == None:
+                cf.newUser(user)
+                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+        langcode = cf.chats[chat_id]['langcode']
+        cf.log.error('[TCM] Function not implemented.')
+
+    async def handleLoglevel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /loglevel commands. This allows super-users to set a loglevel '''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            if cf.users.get(user) == None:
+                cf.newUser(user)
+                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+        langcode = cf.chats[chat_id]['langcode']
+        cf.log.error('[TCM] Function not implemented.')
+
+    async def handleHelp(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /help commands. This displays all commands and the current settings. '''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            if cf.users.get(user) == None:
+                cf.newUser(user)
+                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+        langcode = cf.chats[chat_id]['langcode']
+        cf.log.error('[TCM] Function not implemented.')
+
     async def handleMessage(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         '''Handle the incoming messages and send them to WT'''
         chat_id = str(update.message.chat_id)
@@ -229,12 +473,15 @@ class TelegramChatManager:
             if resp == '':
                 if confirm:
                     resp = cf.ml.getMessage(langcode, 'WT_CONFIRM')
-
+                ops = self.getOPs()
                 for chat in cf.chats:
                     if chat == chat_id:
                         continue
-                    if cf.chats[chat]['tg_to_tg'] == True:
-                        self.sendMessage(chat, dispname + ':\n' + text)
+                    if cf.chats[chat]['tg_to_tg'] == True and cf.chats[chat]['mute'] != 'all':
+                        if cf.chats[chat]['is_private'] == False:
+                            self.sendMessage(chat, dispname + ':\n' + text)
+                        elif not (cf.chats[chat]['mute'] == 'own' and cf.users[cf.chats[chat]['user']]['wt_dispname'] in ops):
+                            self.sendMessage(chat, dispname + ':\n' + text)
 
             if msg != '' and resp != '':
                 msg += '\n\n ---- \n\n' + resp
@@ -271,12 +518,15 @@ class TelegramChatManager:
             if resp == '':
                 if confirm:
                     resp = cf.ml.getMessage(langcode, 'WT_CONFIRM')
-
+                ops = self.getOPs()
                 for chat in cf.chats:
                     if chat == chat_id:
                         continue
-                    if cf.chats[chat]['tg_to_tg'] == True:
-                        self.sendMessage(chat, dispname + ':\n' + text)
+                    if cf.chats[chat]['tg_to_tg'] == True and cf.chats[chat]['mute'] != 'all':
+                        if cf.chats[chat]['is_private'] == False:
+                            self.sendMessage(chat, dispname + ':\n' + text)
+                        elif not (cf.chats[chat]['mute'] == 'own' and cf.users[cf.chats[chat]['user']]['wt_dispname'] in ops):
+                            self.sendMessage(chat, dispname + ':\n' + text)
 
             if msg != '' and resp != '':
                 msg += '\n\n ---- \n\n' + resp
@@ -288,25 +538,28 @@ class TelegramChatManager:
                 await update.message.reply_text(msg, parse_mode='MarkdownV2')
 
             
-    async def sanityCheck(self, update):
+    async def sanityCheck(self, update, silent = False):
         ''' Sanity check to limit access only to existing well-behaved users. This check is for private chats.'''
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
 
         if not cf.chats.get(chat_id):
             msg = telegram.helpers.escape_markdown(cf.ml.getMessage(self.defaultLang, 'UNKNOWN_CHAT_ERROR'), version = 2)
-            await update.message.reply_text(msg, parse_mode='MarkdownV2')
+            if not silent:
+                await update.message.reply_text(msg, parse_mode='MarkdownV2')
             cf.log.warning('[TCM] Sanity check failed. Unknown chat.')
             return False
         langcode = cf.chats[chat_id]['langcode']
         if not cf.users.get(user):
             msg = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'UNKNOWN_CHAT_ERROR'), version = 2)
-            await update.message.reply_text(msg, parse_mode='MarkdownV2')
+            if not silent:
+                await update.message.reply_text(msg, parse_mode='MarkdownV2')
             cf.log.warning('[TCM] Sanity check failed. Unknown user.')
             return False
         if cf.chats[chat_id]['valid'] == False:
             msg = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'NOT_VALID_ERROR'), version = 2)
-            await update.message.reply_text(msg, parse_mode='MarkdownV2')
+            if not silent:
+                await update.message.reply_text(msg, parse_mode='MarkdownV2')
             cf.log.warning('[TCM] Sanity check failed. User not verified.')
             return False
         if cf.chats[chat_id]['user'] != user:
@@ -318,17 +571,19 @@ class TelegramChatManager:
 
         return True
 
-    async def sanityCheckGroup(self, update):
+    async def sanityCheckGroup(self, update, silent = False):
         ''' Sanity check to limit access only to existing well-behaved users. '''
         chat_id = str(update.message.chat_id)
         if not cf.chats.get(chat_id):
             msg = telegram.helpers.escape_markdown(cf.ml.getMessage(self.defaultLang, 'UNKNOWN_CHAT_ERROR'), version = 2)
-            await update.message.reply_text(msg, parse_mode='MarkdownV2')
+            if not silent:
+                await update.message.reply_text(msg, parse_mode='MarkdownV2')
             return False
         langcode = cf.chats[chat_id]['langcode']
         if cf.chats[chat_id]['valid'] == False:
             msg = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'NOT_VALID_ERROR'), version = 2)
-            await update.message.reply_text(msg, parse_mode='MarkdownV2')
+            if not silent:
+                await update.message.reply_text(msg, parse_mode='MarkdownV2')
             return False
         return True
 

@@ -17,7 +17,7 @@ class WinTestTGBot:
         self.defaultLang = os.getenv('DEFAULT_LANG')
         self.wtBOTname = cf.ml.getMessage(self.defaultLang, 'BOT_STATION')
 
-        self.tcm = TelegramChatManager(self.publishMessage)
+        self.tcm = TelegramChatManager(self.publishMessage, self.getOPs)
 
         self._stop_event = False
 
@@ -84,9 +84,9 @@ class WinTestTGBot:
             elif cf.chats[chat]['is_private'] == True and cf.chats[chat]['mute'] == 'own':
                 if not self.stations.get(station): # we've missed the opon command... well then just send the message
                     self.tcm.sendMessage(chat, chat_msg) 
-                elif cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() != self.stations[station].upper():
+                elif not (cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() in self.getOPs()):
                     self.tcm.sendMessage(chat, chat_msg) 
-
+                    print(self.getOPs())
         
 
     def opChangeOnStation(self, station, call=''):
@@ -95,6 +95,7 @@ class WinTestTGBot:
         cf.log.debug('[BOT] Stations update: '+ str(self.stations))
 
     def publishMessage(self, origin, message):
+        ''' Function to publish a message to Wintest. The return code encodes potential errors: 0 -> OK, 1 -> Encoding error, 2 -> Message too long, 3 -> Station too long'''
         try:
             self.wt.sendToWT(origin,message)
             return 0
@@ -107,6 +108,14 @@ class WinTestTGBot:
         except WinTestHandler.InvalidStationLengthException as ls:       
             cf.log.warning('[BOT] Message could not be sent, station name too long!') 
             return 3
+        
+    def getOPs(self):
+        ''' Extract the OPs which are currently logged in. '''
+        ops = []
+        for station in self.stations:
+            if self.stations[station] != '':
+                ops.append(self.stations[station].upper())
+        return ops
 
 class StopInterrupt(threading.Event):
     ''' A dummy event which will just wait. This allows to stay the start thread present.'''

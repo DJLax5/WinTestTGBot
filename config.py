@@ -74,15 +74,21 @@ def checkDatabase(chats, users, modified = False):
             return checkDatabase(chats, users, modified)
             
         if chats[chat].get('wt_confirm') == None:
-            chats[chat]['wt_confirmed'] = True
+            chats[chat]['wt_confirm'] = True
             modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing wt_confirmed tag. Restoring to default.')
+            log.warning('[CONFIG] Database integretry compromised, missing wt_confirm tag. Restoring to default.')
             return checkDatabase(chats, users, modified)
             
         if chats[chat].get('tg_to_tg') == None:
             chats[chat]['tg_to_tg'] = True
             modified = True
             log.warning('[CONFIG] Database integretry compromised, missing tg_to_tg tag. Restoring to default.')
+            return checkDatabase(chats, users, modified)
+        
+        if chats[chat].get('groupname') == None:
+            chats[chat]['groupname'] = ''
+            modified = True
+            log.warning('[CONFIG] Database integretry compromised, missing groupname tag. Restoring to default.')
             return checkDatabase(chats, users, modified)
             
 
@@ -144,7 +150,7 @@ def setupLogging():
     return logger
 
 
-def newChat(chat_id, langcode=os.getenv('DEFAULT_LANG'), is_private=True, mute='none', user='', wt_confirm = (os.getenv('TG_CONFIRM_DEFAULT') == 'True'), tgTOtg=True):
+def newChat(chat_id, langcode=os.getenv('DEFAULT_LANG'), is_private=True, mute='none', user='', wt_confirm = (os.getenv('TG_CONFIRM_DEFAULT') == 'True'), tgTOtg=True, groupname = ''):
     if user != '' and not users.get(user):
         log.warn('[CONFIG] Trying to create a new chat referencing a non-existing user. This is invalid, resetting user reference. ')
         user = ''
@@ -154,7 +160,8 @@ def newChat(chat_id, langcode=os.getenv('DEFAULT_LANG'), is_private=True, mute='
                            'is_private' : is_private,
                            'user' : user,
                            'wt_confirm' : wt_confirm,
-                           'tg_to_tg' : tgTOtg}
+                           'tg_to_tg' : tgTOtg,
+                           'groupname' : groupname}
     storeDatabase()
 
 def newUser(username, wt_dispname = '', chat = '', log_level = 'none'):
@@ -178,7 +185,19 @@ def newPrivateChat(username, chat_id, langcode=os.getenv('DEFAULT_LANG'), mute='
                            'is_private' : True,
                            'user' : username,
                            'wt_confirm' : wt_confirm,
-                           'tg_to_tg' : tgTOtg}
+                           'tg_to_tg' : tgTOtg,
+                           'groupname' : ''}
+    storeDatabase()
+
+def remove(chat):
+    ''' Removes data from a chat. If the chat is private, also all user data is deleted.'''
+    if chats.get(chat) == None:
+        log.warning('[CONFIG] Chat to be deleted does not exist!')
+
+    if chats[chat]['is_private'] == True:
+        user = chats[chat]['user']
+        users.pop(user)
+    chats.pop(chat)
     storeDatabase()
 
 def updateUser(user, key, value):
