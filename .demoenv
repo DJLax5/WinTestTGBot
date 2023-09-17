@@ -15,7 +15,6 @@ LOG_FILE_PATH="data/wttgbot.log"
 DATABASE_FILE_PATH="data/wttgbot.json"
 FILE_LOGGING_LEVEL="WARN" 
 CONSOLE_LOGGING_LEVEL="DEBUG"
-DEFAULT_TELEGRAM_LOGGING_LEVEL="NONE"
 WT_STN_LIMIT=10 # Max. no. of characters of a station
 WT_MSG_LIMIT=79 # Max. no. of characters of a message
 WT_CALL_PREFIX="" # Prefix added to user calls

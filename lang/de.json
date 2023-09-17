@@ -7,7 +7,7 @@
     "OFF" : "aus",
     "WT_BOOT_MSG" : "Der Win-Test Telegram-Bot ist nun aktiv!",
     "WT_SHUTDOWN_MSG": "Der Win-Test Telegram-Bot fährt runter...",
-    "WT_ENCODING_ERROR" : "Tut mir leid, ich konnte diese Nachricht nicht an Win-Test weiterleiten 😕\n\nBitte nutze nur Zeichen des erweiterten lateinischen Alphabets. (Also auch keine Emojis)",
+    "WT_ENCODING_ERROR" : "Tut mir leid, ich konnte diese Nachricht nicht an Win-Test weiterleiten 😕\n\nBitte nutze nur Zeichen des erweiterten lateinischen Alphabets, sowohl in deiner Nachricht als auch in deinem Win-Test Anzeigenamen. (Also auch keine Emojis)",
     "WT_MSG_LONG_ERROR" : "Tut mir leid, ich konnte diese Nachricht nicht an Win-Test weiterleiten 😕\n\nWin-Test Nachrichten haben ein Zeichenlimit von [charlimit] Zeichen!",
     "WT_STN_LONG_ERROR" : "Tut mir leid, ich konnte diese Nachricht nicht an Win-Test weiterleiten 😕\n\nDein Win-Test Anzeigename ([stnname]) überschreitet das Zeichenlimit von [charlimit] zeichen!",
     "WT_CONFIRM" : "Nachricht weitergeleitet 👍",
@@ -22,5 +22,13 @@
     "VERIFY_SUCCESS_PRIVATE" : "Vielen Dank, das war efolgreich!\n\nDieser Bot ist nun einsatzbereit. Für eine Liste an Befehlen nutze /help. \nUm eine Nachricht an Win-Test zu senden, schicke diese einfach direkt an mich. Ich empfehle zuerst einen Win-Test Anzeigenamen festzulegen. Nutze hierfür /name [NAME]\n\nEs ist hilfreich dein Call als Anzeigenamen zu setzten. Dann kann ich diesen Chat und dich als OP in Win-Test zuordnen und dir deine eigenen Win-Test Nachrichten nicht in diesem Chat anzeigen.",
     "VERIFY_SUCCESS_GROUP" : "Vielen Dank, das war erfolgreich!\n\nIch werde von nun an Win-Test Chatnachrichten in diese Gruppe weiterleiten. Um eine Nachricht an Win-Test zu schicken, beginnt die Nachricht mit @[botuname].\n\nJeder von euch kann einen Win-Test Anzeigenamen mit dem Kommando /name [NAME] festlegen. Damit können die OPs in Win-Test den Autor der Nachricht erkennen. Es ist empfehlenswert seinen Win-Test OPON Call für diesen Namen zu verwenden.",
     "VERIFY_FAILED" : "Tut mir leid, das Passwort war nicht korrekt. Versuche es erneut. Stelle sicher, dass auch keine versehentlichen Leerzeichen in der Nachricht sind.",
-    "NOT_VALID_ERROR" : "Dieser Chat ist noch nicht verifiziert. Bitte hole das mit /verify [PASSWORT] nach."
+    "ALREADY_VERIFIED" : "Dieser Chat ist bereits freigeschaltet.",
+    "NOT_VALID_ERROR" : "Dieser Chat ist noch nicht verifiziert. Bitte hole das mit /verify [PASSWORT] nach.",
+    "NAME_SET_USERNAME" : "Danke.\nDa du keinen Namen angegeben hast, habe ich deinen Telegram Benutzernamen [uname] verwendet. Falls du das ändern möchtest, nutze bitte /name [NAME]",
+    "NAME_SYNTAX_UNAME" : "Tut mir leid, das hat nicht funktioniert.\nDie korrekte Syntax für diesen Befehl ist /name [NAME].\nIch habe versucht deinen Telegram Benutzernamen [uname] zu verwenden, dieser überschreitet allerdings das Zeichenlimit von [charlim] Zeichen. Bitte versuche es erneut.",
+    "NAME_SET_SUCCESS" : "Danke.\nDu wirst von nun an in Win-Test als [dispname] angezeigt.",
+    "NAME_SET_FAILED" : "Tut mir leid, das hat nicht funktioniert.\nDein vorgeschlagener Name überschreitet das Zeichenlimit von [charlim] Zeichen. Bitte versuche es erneut.",
+    "LANG_SYNTAX" : "Tut mir leid, das hat nicht funktioniert.\nDie korrekte Syntax lautet /lang [LANGCODE]\nWobei [LANGCODE] für eine der folgenden Sprachen stehen kann (das kürzel vor dem :):\n[languages]",
+    "LANG_SUCCESS" : "In Ordnung, ich werde von nun an deutsch mit dir sprechen.",
+    "LANG_NOT_FOUND" : "Tut mir leid, das hat nicht funktioniert.\nIch konnte die von dir geforderte Sprache leider nicht finden.\nDie korrekte Syntax lautet /lang [LANGCODE]\nWobei [LANGCODE] für eine der folgenden Sprachen stehen kann (das kürzel vor dem :):\n[languages]"
 }

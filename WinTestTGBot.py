@@ -84,7 +84,7 @@ class WinTestTGBot:
             elif cf.chats[chat]['is_private'] == True and cf.chats[chat]['mute'] == 'own':
                 if not self.stations.get(station): # we've missed the opon command... well then just send the message
                     self.tcm.sendMessage(chat, chat_msg) 
-                elif cf.users[cf.chats[chat]['user']]['wt_dispname'] != self.stations[station]:
+                elif cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() != self.stations[station].upper():
                     self.tcm.sendMessage(chat, chat_msg) 
 
         
@@ -130,5 +130,5 @@ if __name__ == '__main__':
             cf.log.info('[BOT] Keyboard Interrupt, shutting down')
             bot.stop() # Stop the bot gracefully
     else: # if the bot could not be started, stop everything
-        cf.log.warninging('[BOT] The bot did not start properly!')
+        cf.log.warning('[BOT] The bot did not start properly!')
         bot.stop() 
