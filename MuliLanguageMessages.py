@@ -3,7 +3,7 @@ import sys, os, json
 class MulitLanguageMessages:
     ''' This class provides easy handlers to acess the multi language messages. The languagefiles are stored in /lang/ in the json format'''
 
-    langDir = 'lang/'
+    langDir = os.getenv('LANGUAGEPACK_PATH')
 
 
     def __init__(self, log):
