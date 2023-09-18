@@ -7,7 +7,6 @@ TELEGRAM_TOKEN="12345" # Token to connect to Telegram
 MAGIC_KEY="secret" # Secret key to authenticate users to be validated
 SUPER_USER_KEY="super-secret" # Secret key to authenticate super-users
 
-
 # The following keys can be modified but also left as-is
 
 DEFAULT_LANG="en" # Default language 

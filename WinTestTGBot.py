@@ -1,14 +1,16 @@
-import config as cf
+import BOTConfiguration as cf
 from WinTestHandler import WinTestHandler
 from TelegramChatManager import TelegramChatManager
 import os, code, time, threading, sys
 
 class WinTestTGBot:
+    ''' The Main bot class. Use this to start the bot. '''
 
     stations = {} # keep track of the stations and who is currently op where
 
     def __init__(self):
         ''' Initialize the bot, setup all pipelines '''
+
         try:
             self.wt = WinTestHandler(self.incomingWTMessage, self.opChangeOnStation)  
         except WinTestHandler.IPNotFoundException as e: # This error is catastropic, shutdown
@@ -19,7 +21,12 @@ class WinTestTGBot:
 
         self.tcm = TelegramChatManager(self.publishMessage, self.getOPs)
 
+        # Now as the TelegramChatManager exists successfully, give its message handler to the telegram logging handlers
+        cf.messageLogCallback = self.tcm.sendMessage
+        cf.setupTGHandlers() 
+
         self._stop_event = False
+        cf.log.info('[BOT] Bot initialized.')
 
     def start(self):
         ''' Start the WT Handler and the TCM '''
@@ -28,7 +35,7 @@ class WinTestTGBot:
             self.log.fatal('[BOT] Could not start WinTestHandler')
             return False
         
-        self.tcm.start()       
+        self.tcm.start() # start the telegram polling      
 
         try:
             while self.wt.wdFlag == True: # wait until we got a heartbeat from wintest,
@@ -47,7 +54,7 @@ class WinTestTGBot:
         except WinTestHandler.InvalidStationLengthException as ls:        
             cf.log.error('[BOT] Cannot send power-up message to WT, Station Length Error!')
 
-
+        cf.log.info('[BOT] Bot started successfully.')
         return True
 
     def stop(self):
@@ -65,6 +72,7 @@ class WinTestTGBot:
             except WinTestHandler.InvalidStationLengthException as ls:        
                 cf.log.error('[BOT] Cannot send power-down message to WT, Station Length Error!')
             self.wt.stop()
+        cf.log.info('[BOT] Bot stopped. Bye.')
 
 
     def incomingWTMessage(self, station, message):
@@ -84,9 +92,8 @@ class WinTestTGBot:
             elif cf.chats[chat]['is_private'] == True and cf.chats[chat]['mute'] == 'own':
                 if not self.stations.get(station): # we've missed the opon command... well then just send the message
                     self.tcm.sendMessage(chat, chat_msg) 
-                elif not (cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() in self.getOPs()):
+                elif not (cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() in self.getOPs()): # filter if OPs requested not to receive messages
                     self.tcm.sendMessage(chat, chat_msg) 
-                    print(self.getOPs())
         
 
     def opChangeOnStation(self, station, call=''):
@@ -98,6 +105,7 @@ class WinTestTGBot:
         ''' Function to publish a message to Wintest. The return code encodes potential errors: 0 -> OK, 1 -> Encoding error, 2 -> Message too long, 3 -> Station too long'''
         try:
             self.wt.sendToWT(origin,message)
+            cf.log.info('[BOT] Message from ' + origin + ' sent to Win-Test: ' + message)
             return 0
         except UnicodeEncodeError as e: # There are exception, origin of this message
             cf.log.warning('[BOT] Message could not be sent, encoding error!')
@@ -140,4 +148,3 @@ if __name__ == '__main__':
             bot.stop() # Stop the bot gracefully
     else: # if the bot could not be started, stop everything
         cf.log.warning('[BOT] The bot did not start properly!')
-        bot.stop() 

@@ -1,7 +1,7 @@
 import sys, os, json
 
 class MulitLanguageMessages:
-    ''' This class provides easy handlers to acess the multi language messages. The languagefiles are stored in /lang/ in the json format'''
+    ''' This class provides easy handlers to acess the multi language messages. The languagefiles are stored in the json format, the path is defined in .env LANGUAGEPACK_PATH '''
 
     langDir = os.getenv('LANGUAGEPACK_PATH')
 
@@ -10,7 +10,7 @@ class MulitLanguageMessages:
         ''' Constructor which will load all present files and messages '''
 
         self.MESSAGES = {} # Stores all messages of all languages
-        self.log = log
+        self.log = log # store the logging object 
         for filename in os.listdir(MulitLanguageMessages.langDir): # just read every json file in the lang file
             if filename.endswith('.json'):
                 langcode = filename.split('.')[0] # NOTE: This forbids language codes to contain a dot.
@@ -30,8 +30,8 @@ class MulitLanguageMessages:
             return '[ERROR] The requested languagecode is not available: ' + langcode
         
         if not self.MESSAGES[langcode].get(msg_id):
-            self.log.error('[ML] The requested Message-ID ('+ msg_id + ') is not present in the languagepack!')
-            return '[ERROR] The requested Message-ID ('+ msg_id + ') is not present in the languagepack!'
+            self.log.error('[ML] The requested Message-ID ('+ msg_id + ') is not present in the languagepack ' + langcode + '!')
+            return '[ERROR] The requested Message-ID ('+ msg_id + ') is not present in the languagepack ' + langcode + '!'
 
         # extract message
         message = self.MESSAGES[langcode][msg_id]

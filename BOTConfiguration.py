@@ -1,26 +1,60 @@
+''' This file provides the configuration for this bot. This includes the logging functionality, multilanguage support and database handling.'''
+# Imports
 import os
 from dotenv import load_dotenv
+load_dotenv() # load the .env keys
 import logging
 import json
 from MuliLanguageMessages import MulitLanguageMessages
 
-load_dotenv() # load the .env keys
+
+class TelegramLoggingHandler(logging.Handler):
+        ''' An class which provides the handler to also send messages to telegram. '''
+        def __init__(self, chat_id,level = 40) -> None:
+            '''Store the target chat_id and log level for this instance'''
+            super().__init__()
+            self.chat_id = chat_id
+            try:
+                self.level = int(level) # try to get the level, revert to 'ERROR' if it fails
+            except:
+                self.level = 40
+                log.error('[TLH] Could not determine the logging-level for telegram messages. Default: ERROR')
+            log.debug('[TLH] New logging handler activated.')
+
+        def updateLevel(self, newlevel):
+            ''' Provides a functionality to update the logging level'''
+            try:
+                self.level = int(newlevel) # try to get the level, revert to 'ERROR' if it fails
+            except:
+                self.level = 40
+                log.error('[TLH] Could not determine the logging-level for telegram messages. Default: ERROR')
+            log.debug('[TLH] Logging level updated to '+ str(newlevel))
+
+        def emit(self, record):
+            ''' The function which is called on each logging event, passes the logging event to telegram using the handler which is set up by the main script'''
+            if record.levelno >= self.level: # record passed the threshold
+                try:
+                    messageLogCallback(self.chat_id,'\U0001F6A7 LOGGING EVENT \U0001F6A7 \n[' + record.levelname + '] ' + record.message)
+                except: # this exception is not needed, the error is logged anyways
+                    pass
+
 
 def loadDatabase():
-    """ Function used to load the userdata"""
+    ''' Function used to load the userdata'''
     
     # load the json data
     try:
-        os.makedirs(os.path.dirname(os.getenv('DATABASE_FILE_PATH')), exist_ok=True)
+        os.makedirs(os.path.dirname(os.getenv('DATABASE_FILE_PATH')), exist_ok=True) # on first start, make sure all the paths are ok
         with open(os.getenv('DATABASE_FILE_PATH')) as f:
             data = json.loads(f.read())
-        if data.get('chats') != None and data.get('users') != None:
+        if data.get('chats') != None and data.get('users') != None: # check the format
+            log.info('[CONFIG] Confdiguration found and loaded')
             return data['chats'], data['users']
         else:
-            log.warn('[CONFIG] The user data is not present. If this is the first start of the bot, this is expected.')
+            log.warning('[CONFIG] The user data is not present. If this is the first start of the bot, this is expected.')
             return {}, {}
     except Exception as e:
-        log.warn('[CONFIG] The user data is not present. If this is the first start of the bot, this is expected.')
+        log.warning('[CONFIG] The user data is not present. If this is the first start of the bot, this is expected.')
         return {}, {}
 
 def storeDatabase():
@@ -31,11 +65,12 @@ def storeDatabase():
         data['chats'] = chats
         with open(os.getenv('DATABASE_FILE_PATH'), 'w') as f:
             f.write(json.dumps(data))
-        log.debug('[CONFIG] Database file written.')
+        log.debug('[CONFIG] Database file updated.')
     except Exception as e:
         log.error('[CONFIG] Writing data file failed. Reason: ' + str(e))
 
 def checkDatabase(chats, users, modified = False):
+    ''' Check the database integity. Also good to insert new attributes into existing instances after an update. '''    
     for chat in chats:
         if chats[chat].get('langcode') == None:
             chats[chat]['langcode'] = os.getenv('DEFAULT_LANG')
@@ -150,9 +185,11 @@ def setupLogging():
     return logger
 
 
-def newChat(chat_id, langcode=os.getenv('DEFAULT_LANG'), is_private=True, mute='none', user='', wt_confirm = (os.getenv('TG_CONFIRM_DEFAULT') == 'True'), tgTOtg=True, groupname = ''):
+def newChat(chat_id, langcode=os.getenv('DEFAULT_LANG'), is_private=True, mute='own', user='', wt_confirm = (os.getenv('TG_CONFIRM_DEFAULT') == 'True'), tgTOtg=True, groupname = ''):
+    ''' If a new chat is started, we append it here to the database '''
+
     if user != '' and not users.get(user):
-        log.warn('[CONFIG] Trying to create a new chat referencing a non-existing user. This is invalid, resetting user reference. ')
+        log.warning('[CONFIG] Trying to create a new chat referencing a non-existing user. This is invalid, resetting user reference. ')
         user = ''
     chats[chat_id] = {'langcode': langcode,
                            'valid' : False,
@@ -162,19 +199,24 @@ def newChat(chat_id, langcode=os.getenv('DEFAULT_LANG'), is_private=True, mute='
                            'wt_confirm' : wt_confirm,
                            'tg_to_tg' : tgTOtg,
                            'groupname' : groupname}
-    storeDatabase()
+    log.debug('[CONFIG] New chat added to database')
+    storeDatabase()   
 
 def newUser(username, wt_dispname = '', chat = '', log_level = 'none'):
+    ''' Store all users interacting with the bot '''
+
     if chat != '' and not chats.get(chat):
-        log.warn('[CONFIG] Trying to create a new user referencing a non-existing chat. This is invalid, resetting chat reference. ')
+        log.warning('[CONFIG] Trying to create a new user referencing a non-existing chat. This is invalid, resetting chat reference. ')
         chat = ''
     users[username] = {'wt_dispname' : wt_dispname,
                             'chat_id' : chat,
                             'log_level' : log_level,
                             'is_superuser' : False}
+    log.info('[CONFIG] New user added to database')
     storeDatabase()
 
 def newPrivateChat(username, chat_id, langcode=os.getenv('DEFAULT_LANG'), mute='own', wt_dispname = '', log_level = 'none', wt_confirm = (os.getenv('TG_CONFIRM_DEFAULT') == 'True'), tgTOtg=True):
+    ''' A private chat always consists of a chat-user pair cross referencing eachother. For this, we provide this function'''
     users[username] = {'wt_dispname' : wt_dispname,
                             'chat_id' : chat_id,
                             'log_level' : log_level,
@@ -187,35 +229,101 @@ def newPrivateChat(username, chat_id, langcode=os.getenv('DEFAULT_LANG'), mute='
                            'wt_confirm' : wt_confirm,
                            'tg_to_tg' : tgTOtg,
                            'groupname' : ''}
+    log.info('[CONFIG] New chat-user pair added to database')
     storeDatabase()
 
 def remove(chat):
     ''' Removes data from a chat. If the chat is private, also all user data is deleted.'''
     if chats.get(chat) == None:
-        log.warning('[CONFIG] Chat to be deleted does not exist!')
+        log.error('[CONFIG] Chat to be deleted does not exist!')
+        return
 
     if chats[chat]['is_private'] == True:
         user = chats[chat]['user']
+        log.info('[CONFIG] User ' + user + ' was removed.')
         users.pop(user)
     chats.pop(chat)
+    log.info('[CONFIG] Chat was removed.')
     storeDatabase()
 
-def updateUser(user, key, value):
+def removeUser(user):
+    ''' Deletes a specific user. If this user has a private chat, this one is deleted aswell. '''
     if users.get(user) == None:
-        log.error('[TCM] Unable to find user ' + user)
+        log.error('[CONFIG] User to be deleted does not exist!')
+        return
+    
+    if users[user]['chat_id'] != '':
+        remove(users[user]['chat_id'])
+    else:
+        log.info('[CONFIG] User ' + user + ' was removed.')
+        users.pop(user)
+        storeDatabase()
+
+def updateUser(user, key, value):
+    ''' Update a specific user key-value pair. Not to be used for the logging level '''
+    if users.get(user) == None:
+        log.error('[CONFIG] Unable to find user ' + user)
+        return
+    if key == 'log_level':
+        log.error('[CONFIG] Tried to set logging level via the update User Handler. This is not valid. Aborting.')
         return
     users[user][key] = value
+    log.debug('[CONFIG] User ' + user + ' got updated: ' + key + ' to ' + str(value))
     storeDatabase()
 
 def updateChat(chat, key, value):
+    ''' Update a specific chat key-value pair.'''
     if chats.get(chat) == None:
-        log.error('[TCM] Unable to find chat ' + chat)
+        log.error('[CONFIG] Unable to find chat ' + chat)
         return
     chats[chat][key] = value
+    log.debug('[CONFIG] A Chat got updated: ' + key + ' to ' + str(value))
     storeDatabase()
+
+def updateUserLogging(user, loglevel, updateDatabase = True):
+    ''' Update function for the user logging handler. In order to remove a logging handler set loglevel to 'none' '''
+    if users.get(user) == None:
+        log.error('[CONFIG] Trying to set a logging handler for a non-existent user ' + user)
+        return -1
+    
+    if telegramLogHandlers.get(user) == None and loglevel.lower() != 'none': # we'll need to create a new handler
+        try:
+            ilevel = int(logging.getLevelName(loglevel.upper()))
+        except:
+            log.warning('[CONFIG] Unable to compute log level.')
+            return -1
+        telegramLogHandlers[user] = TelegramLoggingHandler(users[user]['chat_id'], ilevel)
+        log.addHandler(telegramLogHandlers[user])
+        log.info('[INFO] Logging handler added for user ' + user)
+    elif telegramLogHandlers.get(user) != None:
+        if loglevel.lower() == 'none':
+            log.removeHandler(telegramLogHandlers[user])
+            telegramLogHandlers.pop(user)
+            log.info('[INFO] Logging handler removed for user ' + user)
+        else:
+            try:
+                ilevel = int(logging.getLevelName(loglevel.upper()))
+            except:
+                log.warning('[CONFIG] Unable to compute log level.')
+                return -1
+            telegramLogHandlers[user].updateLevel(ilevel)
+            log.info('[INFO] Logging handler for user ' + user + ' updated to ' + loglevel)
+    if updateDatabase:
+        users[user]['log_level'] = loglevel
+        storeDatabase()
+    return 0
+
+def setupTGHandlers():
+    ''' After the user data is present, setup logging handlers from previous runs '''
+    for user in users:
+        if users[user]['is_superuser'] == True and users[user]['log_level'] != 'none':
+            updateUserLogging(user,users[user]['log_level'], updateDatabase=False)
+
 
 # Run the confiuration, will be executed on first import, only once
 # Logging
+messageLogCallback = None # This needs to be set bevor initializing the Telegram logging handlers
+telegramLogHandlers = {} # Store the handlers 
 log = setupLogging()
 # Database
 chats, users = loadDatabase()
@@ -223,10 +331,12 @@ chats, users, modified = checkDatabase(chats, users)
 if modified:
     storeDatabase()
 
-del modified
+del modified # free-up namespace, no longer needed
+
 # Multiple Languages:
-ml = MulitLanguageMessages(log)
+ml = MulitLanguageMessages(log) # load languages
 if not ml.languageSupported(os.getenv('DEFAULT_LANG')):
     log.fatal('[CONFIG] The default language has no associated languagepack. Cannot operate this way.')
     quit()
-log.info('[CONFIG] Sytsem Started, Configuration loaded!')
+
+log.info('[CONFIG] Sucessfully started the system configuration.')

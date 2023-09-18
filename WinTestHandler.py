@@ -1,4 +1,4 @@
-import config as cf
+import BOTConfiguration as cf
 import logging, socket, re
 import os, threading, time, ipaddress, select
 import numpy as np
@@ -98,8 +98,7 @@ class WinTestHandler:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
             sock.bind((self.ip, int(os.getenv('BROADCAST_PORT'))))
         except Exception as e:
-            cf.log.fatal('[WT] Cannot listen to incoming messages! Aborting!')
-            raise 
+            cf.log.fatal('[WT] Cannot listen to incoming messages! Aborting!') 
         finally:
             self._stop_event = False
             self.running = False
@@ -112,7 +111,7 @@ class WinTestHandler:
                 ready, _, _ = select.select([sock], [], [], 1.0)  # 1-second timeout
                 if ready:
                     data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
-                    cf.log.debug("[WT] Received message: %s" % data)
+                    cf.log.debug("[WT] Received message from Win-Test: %s" % data)
 
                     if data in self._ownMessages: # It's one of our own, ignore
                         continue
@@ -200,8 +199,7 @@ class WinTestHandler:
         # Sendit
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
-            sock.sendto(cmd, (os.getenv('BROADCAST_IP'),int(os.getenv('BROADCAST_PORT'))))
-            
+            sock.sendto(cmd, (os.getenv('BROADCAST_IP'),int(os.getenv('BROADCAST_PORT'))))            
         except Exception as e:
             cf.log.error('[WT] Could not send message! Reason: ' + str(e))
 
