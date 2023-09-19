@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv() # load the .env keys
 import logging
-import json
+import json, re
 from MuliLanguageMessages import MulitLanguageMessages
 
 
@@ -173,8 +173,22 @@ def setupLogging():
     console_handler.setLevel(os.getenv('CONSOLE_LOGGING_LEVEL'))
     console_handler.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
 
+    # handle old logfiles
+    logdir = os.path.dirname(os.getenv('LOG_FILE_PATH'))
+    basename = os.path.basename(os.getenv('LOG_FILE_PATH'))
+    os.makedirs(logdir, exist_ok=True)
+    pattern = r'^'+ basename + r'(?:.(\d+))?$'
+    oldLogs = [filename for filename in os.listdir(logdir) if re.match(pattern, filename)] # get all old logs
+    oldLogs = sorted(oldLogs,key=lambda name: int(re.match(pattern, name).group(1) if re.match(pattern, name).group(1) != None else 0)) # sort them by their number
+
+    for oldfile in reversed(oldLogs):
+        n = int(re.match(pattern, name).group(1) if re.match(pattern, oldfile).group(1) != None else 0) # extract the number
+        if n >= int(os.getenv('KEEP_N_OLD_LOGS')): # number exeeds the max number, delete
+            os.remove(os.path.join(logdir, oldfile))
+        else: # increment the number
+            os.rename(os.path.join(logdir, oldfile),os.getenv('LOG_FILE_PATH') + '.' + str(n+1))
+        
     # Create a file handler and set its level 
-    os.makedirs(os.path.dirname(os.getenv('LOG_FILE_PATH')), exist_ok=True)
     file_handler = logging.FileHandler(os.getenv('LOG_FILE_PATH'), mode='a')
     file_handler.setLevel(os.getenv('FILE_LOGGING_LEVEL'))
     file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='[%d.%m.%y %H:%M:%S]'))
