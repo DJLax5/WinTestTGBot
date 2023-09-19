@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv() # load the .env keys
 import logging
-import json, re
+import json, re, datetime
 from MuliLanguageMessages import MulitLanguageMessages
 
 
@@ -189,6 +189,7 @@ def setupLogging():
             os.rename(os.path.join(logdir, oldfile),os.getenv('LOG_FILE_PATH') + '.' + str(n+1))
         
     # Create a file handler and set its level 
+    open(os.getenv('LOG_FILE_PATH'), "w").write('Win-Test Telegram Bot log file with Level: ' + os.getenv('FILE_LOGGING_LEVEL') + '\nBoot time: ' + datetime.datetime.now().strftime('%d %b %Y, %H:%M:%S') + '\n\n').close()
     file_handler = logging.FileHandler(os.getenv('LOG_FILE_PATH'), mode='a')
     file_handler.setLevel(os.getenv('FILE_LOGGING_LEVEL'))
     file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='[%d.%m.%y %H:%M:%S]'))
