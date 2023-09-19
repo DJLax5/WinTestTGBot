@@ -1,10 +1,6 @@
 {
     "LANGUAGE" : "english",
     "BOT_STATION" : "TG BOT",
-    "YES" : "yes",
-    "NO" : "no",
-    "ON" : "on",
-    "OFF" : "off",
     "WT_BOOT_MSG" : "The Win-Test telegram bot is now active!",
     "WT_SHUTDOWN_MSG": "The Win-Test telegram bot is shutting down...",
     "WT_ENCODING_ERROR" : "Sorry, I couldn't pass that message to Win-Test 😕\n\nPlease only use letters from the extended latin alphabet. That's for both your message as well as for your Win-Tes display name. (That excludes also emojis)",
