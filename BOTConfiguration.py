@@ -182,14 +182,16 @@ def setupLogging():
     oldLogs = sorted(oldLogs,key=lambda name: int(re.match(pattern, name).group(1) if re.match(pattern, name).group(1) != None else 0)) # sort them by their number
 
     for oldfile in reversed(oldLogs):
-        n = int(re.match(pattern, name).group(1) if re.match(pattern, oldfile).group(1) != None else 0) # extract the number
+        n = int(re.match(pattern, oldfile).group(1) if re.match(pattern, oldfile).group(1) != None else 0) # extract the number
         if n >= int(os.getenv('KEEP_N_OLD_LOGS')): # number exeeds the max number, delete
             os.remove(os.path.join(logdir, oldfile))
         else: # increment the number
             os.rename(os.path.join(logdir, oldfile),os.getenv('LOG_FILE_PATH') + '.' + str(n+1))
         
     # Create a file handler and set its level 
-    open(os.getenv('LOG_FILE_PATH'), "w").write('Win-Test Telegram Bot log file with Level: ' + os.getenv('FILE_LOGGING_LEVEL') + '\nBoot time: ' + datetime.datetime.now().strftime('%d %b %Y, %H:%M:%S') + '\n\n').close()
+    f = open(os.getenv('LOG_FILE_PATH'), "w")
+    f.write('Win-Test Telegram Bot log file with Level: ' + os.getenv('FILE_LOGGING_LEVEL') + ', start time: ' + datetime.datetime.now().strftime('%d %b %Y, %H:%M:%S') + '\n')
+    f.close()
     file_handler = logging.FileHandler(os.getenv('LOG_FILE_PATH'), mode='a')
     file_handler.setLevel(os.getenv('FILE_LOGGING_LEVEL'))
     file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='[%d.%m.%y %H:%M:%S]'))

@@ -22,6 +22,11 @@ To gracefully stop the bot please always use `Ctrl+C`. Killing the bot may leave
 - Intensive logging. A log file is created and basically all actions are logged. This is great for debugging and identifying misbehaving users.
 - Protected. As Telegram bots are public, new users need to authenticate themselfs before they can send/receive messages from your Win-Test stations.
 
+### Improvements
+Some possible future improvements:
+- Currently only the OPON / OPOFF commands are registered to detect the current OP. There are more Win-Test messages we could evaluate.
+- Currently only messages to all stations are read/sent. Message to a single station could be implemented.
+
 ## How-To Setup
 You can easily run your own instance of this bot. 
 You'll need:

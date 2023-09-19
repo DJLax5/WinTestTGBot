@@ -81,6 +81,9 @@ class WinTestTGBot:
         chat_msg += ':\n'
         chat_msg += message
         
+        if not self.stations.get(station): # we don't know this station yet. Treat itwith no operators.
+            self.opChangeOnStation(station)
+
         # go over each chat
         for chat in cf.chats:
 
@@ -90,9 +93,7 @@ class WinTestTGBot:
             if cf.chats[chat]['mute'] == 'none':
                 self.tcm.sendMessage(chat, chat_msg) 
             elif cf.chats[chat]['is_private'] == True and cf.chats[chat]['mute'] == 'own':
-                if not self.stations.get(station): # we've missed the opon command... well then just send the message
-                    self.tcm.sendMessage(chat, chat_msg) 
-                elif not (cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() in self.getOPs()): # filter if OPs requested not to receive messages
+                if not (cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() in self.getOPs()): # filter if OPs requested not to receive messages
                     self.tcm.sendMessage(chat, chat_msg) 
         
 
@@ -104,6 +105,7 @@ class WinTestTGBot:
     def publishMessage(self, origin, message):
         ''' Function to publish a message to Wintest. The return code encodes potential errors: 0 -> OK, 1 -> Encoding error, 2 -> Message too long, 3 -> Station too long'''
         try:
+            message = message.replace('\n', ' ') # Discard newlines
             self.wt.sendToWT(origin,message)
             cf.log.info('[BOT] Message from ' + origin + ' sent to Win-Test: ' + message)
             return 0

@@ -118,7 +118,7 @@ class WinTestHandler:
 
                     # The last byte is always the 0 byte, check it
                     if data[-1] != 0:
-                        cf.log.warning('[WT] Received message is not in the correct format!')
+                        cf.log.debug('[WT] Received message is not in the correct format. Maybe it\'s a DX Cluster message. ')
                         continue
 
                     # Extract message, expected checksum and received checksum
@@ -138,9 +138,13 @@ class WinTestHandler:
                     m = re.match(self.GAB_REGEX, msg)
                     if m:
                         station = self.deescapeWT(m.group(1))
+                        toStation = self.deescapeWT(m.group(2))
+                        if toStation != '': # keep private messages private
+                            continue
                         text = self.deescapeWT(m.group(3))
-                        cf.log.info('[WT] Message received from station ' + station + ': ' + text)
-                        self.newMessageHandler(station, text)
+                        if text != '': # ignore empty messages
+                            cf.log.info('[WT] Message received from station ' + station + ': ' + text)
+                            self.newMessageHandler(station, text)
                         
                     # LOGIN / LOGOFF Message
                     m = re.match(self.LOG_REGEX, msg)
@@ -148,10 +152,10 @@ class WinTestHandler:
                         station = self.deescapeWT(m.group(2))
                         if m.group(1) == 'IN':
                             call = self.deescapeWT(m.group(4))
-                            cf.log.info('[WT] Login into station ' + station + ' from OP ' + call)
+                            cf.log.info('[WT] Login from station ' + station + ' from OP ' + call)
                             self.opChangeHandler(station, call)
                         else:
-                            cf.log.info('[WT] Logoff from station ' + station)
+                            cf.log.info('[WT] Logout from station ' + station)
                             self.opChangeHandler(station)
 
                     # We dont care about the other messages ... yet (?)
@@ -188,6 +192,9 @@ class WinTestHandler:
         if len(message) > int(os.getenv('WT_MSG_LIMIT')):
             raise WinTestHandler.InvalidMessageLengthException()
 
+        if message == '':
+            return
+        
         # Now escape special characters for wintest
         message = self.escapeWT(message)
         source = self.escapeWT(source)
@@ -210,6 +217,7 @@ class WinTestHandler:
         msg = msg.replace('\\', '\\\\')
         msg = msg.replace('"', '\\"')
         msg = msg.replace('€', '\\200')
+        msg = msg.replace('\n', ' ')
         escaped_string = ''
         # now encode it latin 1 and find the special characters
         pos = 0
