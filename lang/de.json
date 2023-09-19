@@ -1,10 +1,6 @@
 {
     "LANGUAGE" : "deutsch",
     "BOT_STATION" : "TG BOT",
-    "YES" : "ja",
-    "NO" : "nein",
-    "ON" : "ein",
-    "OFF" : "aus",
     "WT_BOOT_MSG" : "Der Win-Test Telegram-Bot ist nun aktiv!",
     "WT_SHUTDOWN_MSG": "Der Win-Test Telegram-Bot fährt runter...",
     "WT_ENCODING_ERROR" : "Tut mir leid, ich konnte diese Nachricht nicht an Win-Test weiterleiten 😕\n\nBitte nutze nur Zeichen des erweiterten lateinischen Alphabets, sowohl in deiner Nachricht als auch in deinem Win-Test Anzeigenamen. (Also auch keine Emojis)",
