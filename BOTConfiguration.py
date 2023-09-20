@@ -1,6 +1,6 @@
 ''' This file provides the configuration for this bot. This includes the logging functionality, multilanguage support and database handling.'''
 # Imports
-import os
+import os, sys
 from dotenv import load_dotenv
 load_dotenv() # load the .env keys
 import logging
@@ -164,6 +164,7 @@ def checkDatabase(chats, users, modified = False):
         
 
 def setupLogging():
+    ''' Sets up the logger, handles log files and different log levels for different handlers '''
     # Set up the logger with file and console handlers
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
@@ -336,12 +337,20 @@ def setupTGHandlers():
         if users[user]['is_superuser'] == True and users[user]['log_level'] != 'none':
             updateUserLogging(user,users[user]['log_level'], updateDatabase=False)
 
+def handleUncaughtException(exc_type, exc_value, exc_traceback):
+    ''' Generic handler for all uncaught exceptions '''
+    if issubclass(exc_type, KeyboardInterrupt): # let the KeyboardInterrupt Exception pass
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    log.critical("[SYS] An uncaught exception occurred:", exc_info=(exc_type, exc_value, exc_traceback))
 
 # Run the confiuration, will be executed on first import, only once
 # Logging
 messageLogCallback = None # This needs to be set bevor initializing the Telegram logging handlers
 telegramLogHandlers = {} # Store the handlers 
 log = setupLogging()
+sys.excepthook = handleUncaughtException # store generic exception handler
 # Database
 chats, users = loadDatabase()
 chats, users, modified = checkDatabase(chats, users)
