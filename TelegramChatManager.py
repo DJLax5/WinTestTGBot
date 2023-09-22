@@ -184,7 +184,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
             
         langcode = cf.chats[chat_id]['langcode']
         charlim = int(os.getenv('WT_STN_LIMIT')) - len(os.getenv('WT_CALL_PREFIX')) - len(os.getenv('WT_CALL_SUFFIX'))
@@ -220,7 +220,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         langcode = cf.chats[chat_id]['langcode']
         if context.args == []:
             message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'LANG_SYNTAX', vars={'languages':cf.ml.getLanguagesString()}),version = 2)
@@ -248,7 +248,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         langcode = cf.chats[chat_id]['langcode']
 
         if context.args == []:
@@ -293,7 +293,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         langcode = cf.chats[chat_id]['langcode']
         if context.args == []:
             message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'CONFIRM_SYNTAX'),version = 2)
@@ -324,7 +324,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         langcode = cf.chats[chat_id]['langcode']
         if context.args == []:
             message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ALL_SYNTAX'),version = 2)
@@ -392,7 +392,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         
         langcode = cf.chats[chat_id]['langcode']
         cf.remove(chat_id)      
@@ -416,7 +416,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         langcode = cf.chats[chat_id]['langcode']
         if chat_type != 'private':
             message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ONLY_SUPERUSER_GRP'),version = 2) 
@@ -467,7 +467,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         langcode = cf.chats[chat_id]['langcode']
         if chat_type != 'private':
             message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ONLY_SUPERUSER_GRP'),version = 2) 
@@ -513,7 +513,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         langcode = cf.chats[chat_id]['langcode']
         if chat_type != 'private':
             message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ONLY_SUPERUSER_GRP'),version = 2) 
@@ -543,7 +543,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         langcode = cf.chats[chat_id]['langcode']
         if chat_type != 'private':
             message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ONLY_SUPERUSER_GRP'),version = 2) 
@@ -580,7 +580,7 @@ class TelegramChatManager:
                 return
             if cf.users.get(user) == None:
                 cf.newUser(user)
-                cf.log.info('[TCN] New user interacted with this bot: ' + user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
         langcode = cf.chats[chat_id]['langcode']
         settings = {'wt_dispname' : cf.users[user]['wt_dispname'],
                     'languages' : cf.ml.getLanguagesString(),
