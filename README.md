@@ -19,7 +19,7 @@ To gracefully stop the bot please always use `Ctrl+C`. Killing the bot may leave
 - `/name` You can save a different name for each Telegram user. This name will appear in Win-Test as the station form which the messages appear to come from. You can define prefixes and suffixes for this name.
 - `/lang` Multi language support. The bot can communicate with different users in different languages. This language is unique per chat the bot is used in.
 - Customizable per chat. A few more comfort features about when and about what you will receive a Telegram message from this bot.
-- Intensive logging. A log file is created and basically all actions are logged. This is great for debugging and identifying misbehaving users.
+- Intensive logging. A log file is created and basically all actions are logged. This is great for debugging and identifying issues.
 - Protected. As Telegram bots are public, new users need to authenticate themselfs before they can send/receive messages from your Win-Test stations.
 
 ### Improvements
