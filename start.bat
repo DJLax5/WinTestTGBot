@@ -1,7 +1,3 @@
 @echo off
-setlocal enabledelayedexpansion
-set conda_env_path=%~dp0env
-call "%conda_env_path%\Scripts\activate.bat" WT-TGBot-env
-python %~dp0WinTestTGBot.py
-call "%conda_env_path%\Scripts\deactivate.bat"
-endlocal
+set conda_env_path=%~dp0env/
+start %conda_env_path%python.exe %~dp0WinTestTGBot.py 
