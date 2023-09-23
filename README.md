@@ -31,14 +31,14 @@ Some possible future improvements:
 You can easily run your own instance of this bot. 
 You'll need:
 - A pc within the same network as the Win-Test 
-- A python environment with the packages of `requirements.txt` installed (Tested in Python 3.11.)
+- A python environment with the packages of `requirements.txt` installed (Tested in Python 3.11.). You can directly create this environment with `conda` using `conda env create --prefix ./env --file environment.yml`
 - A Telegram bot token. Create one within Telegram with `@BotFather`. Disable privacy mode for this bot to be able to use group chats.
 
 To run the bot:
 1. Clone this repo
 1. Copy the file `.demoenv` to `.env`
 1. Edit the `.env` file. Set your Win-Test broadcast IP, Port & Subnet, Telegram token and the passwords for users and super-users.
-1. Run the bot in your python environment. Make sure you allow python through your firewall.
+1. Run the bot (`WinTestTGBot.py`) in your python environment. If you're on a windows machine and used the environment.yml file to setup your environment, you can run the `start.bat` file. Make sure you allow python through your firewall.
 1. Start the Telegram bot by sending `/start` to it. 
 
 Have fun!

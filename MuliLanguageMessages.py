@@ -1,4 +1,4 @@
-import sys, os, json
+import os, json
 
 class MulitLanguageMessages:
     ''' This class provides easy handlers to acess the multi language messages. The languagefiles are stored in the json format, the path is defined in .env LANGUAGEPACK_PATH '''

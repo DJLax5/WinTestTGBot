@@ -1,9 +1,6 @@
 import BOTConfiguration as cf
-import logging, socket, re
+import socket, re
 import os, threading, time, ipaddress, select
-import numpy as np
-from enum import Enum
-
 
 class WinTestHandler:
     ''' This class provides the handling of wintest messages, reception and infusing the wintest network with additional messages. '''

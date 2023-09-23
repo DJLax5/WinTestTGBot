@@ -1,7 +1,7 @@
 import BOTConfiguration as cf
 from WinTestHandler import WinTestHandler
 from TelegramChatManager import TelegramChatManager
-import os, code, time, threading, sys
+import os, time, threading
 
 class WinTestTGBot:
     ''' The Main bot class. Use this to start the bot. '''

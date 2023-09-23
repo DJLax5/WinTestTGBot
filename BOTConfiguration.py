@@ -365,4 +365,4 @@ if not ml.languageSupported(os.getenv('DEFAULT_LANG')):
     log.fatal('[CONFIG] The default language has no associated languagepack. Cannot operate this way.')
     quit()
 
-log.info('[CONFIG] Sucessfully started the system configuration.')
+log.info('[CONFIG] Sucessfully started the system configuration. Interpreter Version: ' + sys.version)

@@ -10,7 +10,7 @@ from telegram.ext import (
     filters,
 )
 import asyncio
-import re, time
+import re
 
 class TelegramChatManager:
     ''' This class provides the Chat Management used to handle all messages between Telegram and this software'''
