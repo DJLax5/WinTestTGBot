@@ -133,7 +133,7 @@ class TelegramChatManager:
                 message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'WELCOME_PRIVATE', vars={'name':update.message.from_user.first_name}),version = 2)
             else:
                 langcode = self.defaultLang
-                cf.newChat(chat_id, langcode=langcode, is_private=False, groupname = update.message.chat.title)
+                cf.newChat(chat_id, langcode=langcode, is_private=False, groupname = update.message.chat.title, mute='none')
                 cf.log.info('[TCM] A new group chat just started: ' + update.message.chat.title)
                 message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'WELCOME_GROUP'),version = 2)
         await update.message.reply_text(message, parse_mode='MarkdownV2')
