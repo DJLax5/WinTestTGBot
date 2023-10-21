@@ -4,7 +4,7 @@ import os, sys
 from dotenv import load_dotenv
 load_dotenv() # load the .env keys
 import logging
-import json, re, datetime
+import json, re, datetime, threading
 from MuliLanguageMessages import MulitLanguageMessages
 
 
@@ -32,6 +32,8 @@ class TelegramLoggingHandler(logging.Handler):
 
         def emit(self, record):
             ''' The function which is called on each logging event, passes the logging event to telegram using the handler which is set up by the main script'''
+            if 'cannot schedule new futures after shutdown' in record.message: # we're logging recursive execptions, and we're probably the cause of it. break the loop!
+                return
             if record.levelno >= self.level: # record passed the threshold
                 try:
                     messageLogCallback(self.chat_id,'\U0001F6A7 LOGGING EVENT \U0001F6A7 \n[' + record.levelname + '] ' + record.message)
@@ -190,10 +192,10 @@ def setupLogging():
             os.rename(os.path.join(logdir, oldfile),os.getenv('LOG_FILE_PATH') + '.' + str(n+1))
         
     # Create a file handler and set its level 
-    f = open(os.getenv('LOG_FILE_PATH'), "w")
+    f = open(os.getenv('LOG_FILE_PATH'), "w", encoding='utf-8')
     f.write('Win-Test Telegram Bot log file with Level: ' + os.getenv('FILE_LOGGING_LEVEL') + ', start time: ' + datetime.datetime.now().strftime('%d %b %Y, %H:%M:%S') + '\n')
     f.close()
-    file_handler = logging.FileHandler(os.getenv('LOG_FILE_PATH'), mode='a')
+    file_handler = logging.FileHandler(os.getenv('LOG_FILE_PATH'), mode='a', encoding='utf-8')
     file_handler.setLevel(os.getenv('FILE_LOGGING_LEVEL'))
     file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='[%d.%m.%y %H:%M:%S]'))
 
@@ -312,12 +314,12 @@ def updateUserLogging(user, loglevel, updateDatabase = True):
             return -1
         telegramLogHandlers[user] = TelegramLoggingHandler(users[user]['chat_id'], ilevel)
         log.addHandler(telegramLogHandlers[user])
-        log.info('[INFO] Logging handler added for user ' + user)
+        log.info('[CONFIG] Logging handler added for user ' + user)
     elif telegramLogHandlers.get(user) != None:
         if loglevel.lower() == 'none':
             log.removeHandler(telegramLogHandlers[user])
             telegramLogHandlers.pop(user)
-            log.info('[INFO] Logging handler removed for user ' + user)
+            log.info('[CONFIG] Logging handler removed for user ' + user)
         else:
             try:
                 ilevel = int(logging.getLevelName(loglevel.upper()))
@@ -325,7 +327,7 @@ def updateUserLogging(user, loglevel, updateDatabase = True):
                 log.warning('[CONFIG] Unable to compute log level.')
                 return -1
             telegramLogHandlers[user].updateLevel(ilevel)
-            log.info('[INFO] Logging handler for user ' + user + ' updated to ' + loglevel)
+            log.info('[CONFIG] Logging handler for user ' + user + ' updated to ' + loglevel)
     if updateDatabase:
         users[user]['log_level'] = loglevel
         storeDatabase()
@@ -339,11 +341,14 @@ def setupTGHandlers():
 
 def handleUncaughtException(exc_type, exc_value, exc_traceback):
     ''' Generic handler for all uncaught exceptions '''
-    if issubclass(exc_type, KeyboardInterrupt): # let the KeyboardInterrupt Exception pass
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-
+    try:
+        if issubclass(exc_type, KeyboardInterrupt): # let the KeyboardInterrupt Exception pass
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+    except:
+        pass
     log.critical("[SYS] An uncaught exception occurred:", exc_info=(exc_type, exc_value, exc_traceback))
+
 
 # Run the confiuration, will be executed on first import, only once
 # Logging
@@ -351,6 +356,7 @@ messageLogCallback = None # This needs to be set bevor initializing the Telegram
 telegramLogHandlers = {} # Store the handlers 
 log = setupLogging()
 sys.excepthook = handleUncaughtException # store generic exception handler
+threading.excepthook = handleUncaughtException
 # Database
 chats, users = loadDatabase()
 chats, users, modified = checkDatabase(chats, users)

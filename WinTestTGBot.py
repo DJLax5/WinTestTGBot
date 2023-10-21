@@ -19,7 +19,7 @@ class WinTestTGBot:
         self.defaultLang = os.getenv('DEFAULT_LANG')
         self.wtBOTname = cf.ml.getMessage(self.defaultLang, 'BOT_STATION')
 
-        self.tcm = TelegramChatManager(self.publishMessage, self.getOPs)
+        self.tcm = TelegramChatManager(self.publishMessage, self.getOPs, self.getDataDump)
 
         # Now as the TelegramChatManager exists successfully, give its message handler to the telegram logging handlers
         cf.messageLogCallback = self.tcm.sendMessage
@@ -36,7 +36,6 @@ class WinTestTGBot:
             return False
         
         self.tcm.start() # start the telegram polling      
-
         try:
             while self.wt.wdFlag == True: # wait until we got a heartbeat from wintest,
                 time.sleep(0.1)
@@ -126,6 +125,18 @@ class WinTestTGBot:
             if self.stations[station] != '':
                 ops.append(self.stations[station].upper())
         return ops
+    
+    def getDataDump(self):
+        ''' Dumps the current Win-Test state into a dict. (Heartbeat status and Staions/OPs) '''
+        data_dump = {'wt_heartbeat':not self.wt.wdFlag}
+        stationStr = ''
+        for station in self.stations:
+            stationStr += station
+            if self.stations[station] != '':
+                stationStr += ', OP: ' + self.stations[station]
+            stationStr += '\n'
+        data_dump['stations'] = stationStr
+        return data_dump
 
 class StopInterrupt(threading.Event):
     ''' A dummy event which will just wait. This allows to stay the start thread present.'''

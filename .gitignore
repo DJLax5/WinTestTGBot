@@ -163,3 +163,5 @@ cython_debug/
 # The files created by the Bot are not to be committed
 data/
 tmp/
+*.bat
+!start.bat

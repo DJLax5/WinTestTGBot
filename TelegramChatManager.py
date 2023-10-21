@@ -15,14 +15,17 @@ import re
 class TelegramChatManager:
     ''' This class provides the Chat Management used to handle all messages between Telegram and this software'''
 
-    def __init__(self, messageToWThandler, getOPsHandler):
+    def __init__(self, messageToWThandler, getOPsHandler, getWinTestDump):
         ''' Construct the chat manager, with an application and the basic push capability '''
         self.bot = telegram.Bot(token=os.getenv('TELEGRAM_TOKEN'))
         self.username = ''
         self._loop = asyncio.new_event_loop()        
         asyncio.set_event_loop(self._loop)
+        asyncio.get_event_loop().set_exception_handler(self.handleCoroutineException)
+        threading.excepthook = cf.handleUncaughtException
         self.toWT = messageToWThandler
         self.getOPs = getOPsHandler
+        self.getWTdump = getWinTestDump
         self._thread = None
         self.defaultLang = os.getenv('DEFAULT_LANG')
 
@@ -49,13 +52,14 @@ class TelegramChatManager:
         self.app.add_handler(CommandHandler('leave', self.handleLeave, filters=~filters.UpdateType.EDITED)) 
         self.app.add_handler(CommandHandler('dump', self.handleDump, filters=~filters.UpdateType.EDITED)) # only for super users in private chats
         self.app.add_handler(CommandHandler('makeleave', self.handleMakeLeave, filters=~filters.UpdateType.EDITED)) # only for super users in private chats
+        self.app.add_handler(CommandHandler('muteall', self.handleMuteall, filters=~filters.UpdateType.EDITED)) # only for super users in private chats
         self.app.add_handler(CommandHandler('plebs', self.handlePlebs, filters=~filters.UpdateType.EDITED)) # only for super users in private chats
         self.app.add_handler(CommandHandler('loglevel', self.handleLoglevel, filters=~filters.UpdateType.EDITED)) # only for super users in private chats
         self.app.add_handler(CommandHandler('help', self.handleHelp, filters=~filters.UpdateType.EDITED))  
         # And the message handlers      
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE & ~filters.UpdateType.EDITED, self.handleMessage))
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.GROUP & ~filters.UpdateType.EDITED & filters.Regex(r'^@'+ self.username + ' '), self.handleGroupMessage))  # Regex to only trigger if the message starts with the bot mention         
-        
+        self.app.add_error_handler(self.errorHandler)
         cf.log.info('[TCM] Bot sucessfully instanciated, username: ' + self.username)
         
 
@@ -96,12 +100,15 @@ class TelegramChatManager:
             except telegram.error.BadRequest as e:
                 cf.log.warning('[TCM] The message could not be sent. Reason: ' + str(e))
 
-        if not wait:
-            asyncio.set_event_loop(self._loop)
-            asyncio.ensure_future(send_message(self, chatID, message))
-        else:
-            future = asyncio.run_coroutine_threadsafe(send_message(self, chatID, message), self._loop)
-            future.result() 
+        try:
+            if not wait:
+                asyncio.set_event_loop(self._loop)
+                asyncio.ensure_future(send_message(self, chatID, message))
+            else:
+                future = asyncio.run_coroutine_threadsafe(send_message(self, chatID, message), self._loop)
+                future.result() 
+        except:
+            cf.log.error('[TCM] Could not run the coroutine to send a message.')
    
 
     async def handleStart(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -450,7 +457,8 @@ class TelegramChatManager:
                 data_dump.pop('is_private')
                 data_dump.pop('user')
                 dump_msg += telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'DUMP_GRPchat', vars=data_dump),version = 2) + '\n'
-
+        data_dump = self.getWTdump()
+        dump_msg += '\n' + telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'DUMP_SUFFIX', vars=data_dump),version = 2)
         await update.message.reply_text(dump_msg, parse_mode='MarkdownV2')
 
 
@@ -498,6 +506,41 @@ class TelegramChatManager:
                     break         
             if not found:
                 message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MAKELEAVE_NOT_FOUND'),version = 2)
+        await update.message.reply_text(message, parse_mode='MarkdownV2')
+
+    async def handleMuteall(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /muteall commands. This allows super users to mute all chats after a contest. '''
+        chat_type = update.message.chat.type
+        chat_id = str(update.message.chat_id)
+        user = update.message.from_user.username
+        if chat_type == 'private':
+            if not await self.sanityCheck(update):
+                return
+        else:
+            if not await self.sanityCheckGroup(update):
+                return
+            if cf.users.get(user) == None:
+                cf.newUser(user)
+                cf.log.info('[TCM] New user interacted with this bot: ' + user)
+        langcode = cf.chats[chat_id]['langcode']
+        if chat_type != 'private':
+            message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ONLY_SUPERUSER_GRP'),version = 2) 
+            await update.message.reply_text(message, parse_mode='MarkdownV2')
+            return
+        if cf.users[user]['is_superuser'] == False:
+            message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'ONLY_SUPERUSER_PRV'),version = 2) 
+            await update.message.reply_text(message, parse_mode='MarkdownV2')
+            return
+
+        for chat in cf.chats:
+            if chat == chat_id:
+                continue
+            cf.updateChat(chat, 'mute', 'all')
+            us_langcode = cf.chats[chat]['langcode']
+            self.sendMessage(chat, cf.ml.getMessage(us_langcode, 'MUTE_ALL_PRV' if cf.chats[chat]['is_private'] == True else 'MUTE_ALL_GRP'))
+            
+        message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_ALL_SUCCESS'),version = 2)
+        cf.log.info('[TCM] Super-User ' + user + ' just muted all chats.')
         await update.message.reply_text(message, parse_mode='MarkdownV2')
 
     async def handlePlebs(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -685,7 +728,13 @@ class TelegramChatManager:
             if msg != '':
                 msg = telegram.helpers.escape_markdown(msg, version = 2)
                 await update.message.reply_text(msg, parse_mode='MarkdownV2')
+    
+    async def errorHandler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' If a uncaught telegram  error within a telegram message arises. '''
+        cf.log.error('[TCM] An uncaught exception in the telegram module occurred. This bot will continue to run. \nException: ' + str(context.error), exc_info=context.error)
 
+    def handleCoroutineException(self, coro, context):
+        cf.log.error('[TCM] A coroutine failed to execute! \nException: ' + str(context['exception']), exc_info=context['exception'])
             
     async def sanityCheck(self, update, silent = False):
         ''' Sanity check to limit access only to existing well-behaved users. This check is for private chats.'''
