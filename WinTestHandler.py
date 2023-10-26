@@ -200,7 +200,9 @@ class WinTestHandler:
         cmd = 'GAB: "' + source + '" "" "' + message + '"'
         cmd = self.toUDPmsg(cmd) # encode and append checksum
         self._ownMessages.append(cmd)
-        # Sendit
+        while len(self._ownMessages) > 5:
+            self._ownMessages.pop(0)
+        # Send it
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
             sock.sendto(cmd, (os.getenv('BROADCAST_IP'),int(os.getenv('BROADCAST_PORT'))))            
