@@ -125,6 +125,8 @@ class TelegramChatManager:
         else: # new chat
             if chat_type == 'private':
                 user = update.message.from_user.username
+                if user == None:
+                    user = chat_id
                 langcode = update.message.from_user.language_code # try to greet the user in its own language                
                 if not cf.ml.languageSupported(langcode):
                     langcode = self.defaultLang
@@ -183,6 +185,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -219,6 +224,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -246,7 +254,10 @@ class TelegramChatManager:
         ''' Handle /mute commands. This mutes Win-Test Messages into this chat. '''
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
-        user = update.message.from_user.username
+        user = update.message.from_user.username        
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -292,6 +303,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -323,6 +337,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -354,6 +371,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -391,6 +411,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -415,6 +438,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -467,6 +493,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -513,6 +542,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -548,6 +580,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -578,6 +613,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -615,6 +653,9 @@ class TelegramChatManager:
         chat_type = update.message.chat.type
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
+            
         if chat_type == 'private':
             if not await self.sanityCheck(update):
                 return
@@ -740,6 +781,8 @@ class TelegramChatManager:
         ''' Sanity check to limit access only to existing well-behaved users. This check is for private chats.'''
         chat_id = str(update.message.chat_id)
         user = update.message.from_user.username
+        if user == None:
+            user = chat_id
 
         if not cf.chats.get(chat_id):
             msg = telegram.helpers.escape_markdown(cf.ml.getMessage(self.defaultLang, 'UNKNOWN_CHAT_ERROR'), version = 2)
