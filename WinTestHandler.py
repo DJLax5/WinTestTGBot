@@ -42,11 +42,12 @@ class WinTestHandler:
         broadcast_ip = ipaddress.IPv4Address(os.getenv('BROADCAST_IP'))
         subnet_mask = ipaddress.IPv4Address(os.getenv('WINTEST_SUBNET'))
         network_address = int(broadcast_ip) & int(subnet_mask)
-
+        cf.log.debug('[WT] Target Subnet: ' + str(broadcast_ip))
         # Check if each assigned IP is in the same subnet as the broadcast IP
         self.ip = ''
         for ip_str in ip_addresses:
             ip = ipaddress.ip_address(ip_str)
+            cf.log.debug('[WT] Assigned IP: ' + str(ip))
             if int(ip) & int(subnet_mask) == network_address:
                 self.ip = ip_str
                 cf.log.info('[WT] Found Network interface/ip to communicate with Win-Test, using ' + ip_str)
