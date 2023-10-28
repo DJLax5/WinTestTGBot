@@ -48,3 +48,6 @@ This is a hobby project. There is no warranty whatsoever. Use at your own risk.
 Respect the license. 
 Do anything, but make sure you reference me as your source.
 You may not comercialize this bot or anything that is bulid on-top of it.
+
+## Known Bugs
+- If the system running this bot loses the internet connection, this bot will hang. A manual restart is currently required.
