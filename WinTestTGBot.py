@@ -76,11 +76,11 @@ class WinTestTGBot:
 
     def incomingWTMessage(self, station, message):
         ''' If a WinTest Chat Message was captured, and parsed, handle it. '''
-        chat_msg = station + ((' / ' + self.stations[station]) if self.stations.get(station) else '')
+        chat_msg = '<b>' + station + ((' / ' + self.stations[station]) if self.stations.get(station) else '') + '<b>'
         chat_msg += ':\n'
         chat_msg += message
         
-        if not self.stations.get(station): # we don't know this station yet. Treat itwith no operators.
+        if not self.stations.get(station): # we don't know this station yet. Treat it with no operators.
             self.opChangeOnStation(station)
 
         # go over each chat
