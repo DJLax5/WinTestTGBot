@@ -796,6 +796,7 @@ class TelegramChatManager:
                 cf.log.warning('[TCM] Sanity check failed. Unknown chat.')
             return False
         langcode = cf.chats[chat_id]['langcode']
+        # TODO: Handle username change
         if not cf.users.get(user):
             msg = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'UNKNOWN_CHAT_ERROR'), version = 2)
             if not silent:
