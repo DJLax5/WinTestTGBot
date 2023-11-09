@@ -7,6 +7,7 @@ At any doubt in operation use the Telegram command `/help`.
 
 Feel free to contribute.
 The messages the bot can send are stored in the `lang` folder. There you would fix a typo or add a new language. Please use the ISO language code as filename. All JSON files in this folder are automatically loaded at startup. Adding a language is as simple as adding a new language file.
+There are running installments of this bot which regularly pull the main branch. Please push new features into `dev`. 
 
 To gracefully stop the bot please always use `Ctrl+C`. Killing the bot may leave open sockets.
 
@@ -50,4 +51,6 @@ Do anything, but make sure you reference me as your source.
 You may not comercialize this bot or anything that is bulid on-top of it.
 
 ## Known Bugs
-- If the system running this bot loses the internet connection, this bot will hang. A manual restart is currently required.
+- If the system running this bot loses the internet connection, this bot will hang. A manual restart may be required.
+- If a user changes its username, the bot will no longer recognise the user
+- Works only with a limited number of users (about 10) 
