@@ -35,6 +35,7 @@ class TelegramChatManager:
         # Try to get the bot's username and build the app
         try:
             self._loop.run_until_complete(getUsername())            
+            # TODO: Add Timeput & pollsize, test as spam bot!
             self.app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
         except Exception as e:
             cf.log.fatal('[TCM] Could not establish a connection to Telegram. Is the key correct? Exception: ' + str(e))
