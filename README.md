@@ -5,7 +5,8 @@ It brings all OPs of a multi-op station closer in a contest.
 
 At any doubt in operation use the Telegram command `/help`.
 
-Feel free to contribute.
+Feel free to contribute!
+
 The messages the bot can send are stored in the `lang` folder. There you would fix a typo or add a new language. Please use the ISO language code as filename. All JSON files in this folder are automatically loaded at startup. Adding a language is as simple as adding a new language file.
 There are running installments of this bot which regularly pull the main branch. Please push new features into `dev`. 
 
