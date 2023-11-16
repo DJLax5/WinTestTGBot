@@ -582,9 +582,10 @@ class TelegramChatManager:
         for chat in cf.chats:
             if chat == chat_id:
                 continue
-            cf.updateChat(chat, 'mute', 'all')
-            us_langcode = cf.chats[chat]['langcode']
-            self.sendMessage(chat, cf.ml.getMessage(us_langcode, 'MUTE_ALL_PRV' if cf.chats[chat]['is_private'] == True else 'MUTE_ALL_GRP'))
+            if cf.chats[chat]['mute'] != 'all':
+                cf.updateChat(chat, 'mute', 'all')
+                us_langcode = cf.chats[chat]['langcode']
+                self.sendMessage(chat, cf.ml.getMessage(us_langcode, 'MUTE_ALL_PRV' if cf.chats[chat]['is_private'] == True else 'MUTE_ALL_GRP'))
             
         message = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'MUTE_ALL_SUCCESS'),version = 2)
         cf.log.info('[TCM] Super-User ' + user + ' just muted all chats.')
