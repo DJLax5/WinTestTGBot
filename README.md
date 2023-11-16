@@ -52,6 +52,5 @@ Do anything, but make sure you reference me as your source.
 You may not comercialize this bot or anything that is bulid on-top of it.
 
 ## Known Bugs
-- If the system running this bot loses the internet connection, this bot will hang. A manual restart may be required.
-- If a user changes its username, the bot will no longer recognise the user
-- Works only with a limited number of users (about 10) 
+- If the system running this bot loses internet connection, messages will not be sent via telegram. The bot usually will fix itself.
+- Works only with a limited number of users (tested with 25, should work up to 50 but not tested) 
