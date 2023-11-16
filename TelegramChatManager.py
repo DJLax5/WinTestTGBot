@@ -10,7 +10,8 @@ from telegram.ext import (
     filters,
 )
 import asyncio
-import re
+import re, time
+import httpx
 
 class TelegramChatManager:
     ''' This class provides the Chat Management used to handle all messages between Telegram and this software'''
@@ -35,8 +36,14 @@ class TelegramChatManager:
         # Try to get the bot's username and build the app
         try:
             self._loop.run_until_complete(getUsername())            
-            # TODO: Add Timeput & pollsize, test as spam bot!
-            self.app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
+            builder = Application.builder().token(os.getenv('TELEGRAM_TOKEN'))
+            builder = builder.connect_timeout(120)
+            builder = builder.connection_pool_size(1024)
+            builder = builder.get_updates_connection_pool_size(1024)
+            builder = builder.get_updates_connect_timeout(120)
+            builder = builder.pool_timeout(5)
+            builder = builder.read_timeout(5).write_timeout(5)
+            self.app = builder.build()
         except Exception as e:
             cf.log.fatal('[TCM] Could not establish a connection to Telegram. Is the key correct? Exception: ' + str(e))
             quit()
@@ -105,6 +112,8 @@ class TelegramChatManager:
                 await self.bot.send_message(chat_id=chatID, text=message, parse_mode='MarkdownV2')
             except telegram.error.BadRequest as e:
                 cf.log.warning('[TCM] The message could not be sent. Reason: ' + str(e))
+            except httpx.ConnectError:
+                cf.log.warning('[TCM] Failed to send a message to Telegram, currently no internet connection!')
 
         try:
             if not wait:
@@ -713,14 +722,21 @@ class TelegramChatManager:
                 if confirm:
                     resp = cf.ml.getMessage(langcode, 'WT_CONFIRM')
                 ops = self.getOPs()
+                count = 0
                 for chat in cf.chats:
                     if chat == chat_id:
                         continue
                     if cf.chats[chat]['tg_to_tg'] == True and cf.chats[chat]['mute'] != 'all':
                         if cf.chats[chat]['is_private'] == False:
                             self.sendMessage(chat, dispname + ':\n' + text)
+                            count += 1
                         elif not (cf.chats[chat]['mute'] == 'own' and cf.users[cf.chats[chat]['user']]['wt_dispname'] in ops):
                             self.sendMessage(chat, dispname + ':\n' + text)
+                            count += 1
+                    
+                    if count == 25: # sending too many messages at once is not working. Just wait until we can send more! A more elegant solution may be implemented!
+                        time.sleep(8)
+                        count = 0 
 
             if msg != '' and resp != '':
                 msg += '\n\n ---- \n\n' + resp
@@ -758,14 +774,21 @@ class TelegramChatManager:
                 if confirm:
                     resp = cf.ml.getMessage(langcode, 'WT_CONFIRM')
                 ops = self.getOPs()
+                count = 0
                 for chat in cf.chats:
                     if chat == chat_id:
                         continue
                     if cf.chats[chat]['tg_to_tg'] == True and cf.chats[chat]['mute'] != 'all':
                         if cf.chats[chat]['is_private'] == False:
                             self.sendMessage(chat, dispname + ':\n' + text)
+                            count += 1
                         elif not (cf.chats[chat]['mute'] == 'own' and cf.users[cf.chats[chat]['user']]['wt_dispname'] in ops):
                             self.sendMessage(chat, dispname + ':\n' + text)
+                            count += 1
+
+                    if count == 25: # sending too many messages at once is not working. Just wait until we can send more! A more elegant solution may be implemented!
+                        time.sleep(8)
+                        count = 0 
 
             if msg != '' and resp != '':
                 msg += '\n\n ---- \n\n' + resp
@@ -797,19 +820,22 @@ class TelegramChatManager:
                 cf.log.warning('[TCM] Sanity check failed. Unknown chat.')
             return False
         langcode = cf.chats[chat_id]['langcode']
-        # TODO: Handle username change
-        if not cf.users.get(user):
-            msg = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'UNKNOWN_CHAT_ERROR'), version = 2)
-            if not silent:
-                await update.message.reply_text(msg, parse_mode='MarkdownV2')
-                cf.log.warning('[TCM] Sanity check failed. Unknown user.')
-            return False
+
         if cf.chats[chat_id]['valid'] == False:
             msg = telegram.helpers.escape_markdown(cf.ml.getMessage(langcode, 'NOT_VALID_ERROR'), version = 2)
             if not silent:
                 await update.message.reply_text(msg, parse_mode='MarkdownV2')
                 cf.log.warning('[TCM] Sanity check failed. User not verified.')
             return False
+
+        if user != cf.chats[chat_id]['user']:
+            oldUser = cf.chats[chat_id]['user']
+            if cf.users.get(oldUser) != None:
+                cf.updateUsername(oldUser, user)
+                cf.log.info('[TCM] Changing username from user ' + oldUser + ' to ' + user)
+            else:
+                cf.newUser(user, chat=chat_id)
+
         if cf.chats[chat_id]['user'] != user:
             cf.log.warning('[TCM] Database inconsistency. Chat points to wrong user. Fixing that.')
             cf.updateChat(chat_id, 'user', user)

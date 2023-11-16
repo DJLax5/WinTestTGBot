@@ -83,6 +83,7 @@ class WinTestTGBot:
         if not self.stations.get(station): # we don't know this station yet. Treat it with no operators.
             self.opChangeOnStation(station)
 
+        count = 0
         # go over each chat
         for chat in cf.chats:
 
@@ -90,11 +91,17 @@ class WinTestTGBot:
                 continue
             # All unmuted chats and chats which are not the current operator get notified
             if cf.chats[chat]['mute'] == 'none':
-                self.tcm.sendMessage(chat, chat_msg) 
+                self.tcm.sendMessage(chat, chat_msg)
+                count += 1 
             elif cf.chats[chat]['is_private'] == True and cf.chats[chat]['mute'] == 'own':
-                if not (cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() in self.getOPs()): # filter if OPs requested not to receive messages
+                if not (cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() in self.getOPs()): # filter if OPs requested not to receive messages:
                     self.tcm.sendMessage(chat, chat_msg) 
-        
+                    count += 1 
+            
+            if count == 25: # sending too many messages at once is not working. Just wait until we can send more! A more elegant solution may be implemented!
+                time.sleep(8)
+                count = 0 
+
 
     def opChangeOnStation(self, station, call=''):
         ''' If a OP-Change on a station was detected, mark it. To OP-OFF a station, leave the call empty.'''        
