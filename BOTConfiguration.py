@@ -32,8 +32,9 @@ class TelegramLoggingHandler(logging.Handler):
 
         def emit(self, record):
             ''' The function which is called on each logging event, passes the logging event to telegram using the handler which is set up by the main script'''
-            if 'cannot schedule new futures after shutdown' in record.message: # we're logging recursive execptions, and we're probably the cause of it. break the loop!
+            if 'cannot schedule new futures after shutdown' in record.message or 'httpx.ConnectError' in record.message: # we're logging recursive execptions, and we're probably the cause of it. break the loop! Smarter solutions will exist..
                 return
+            
             if record.levelno >= self.level: # record passed the threshold
                 try:
                     messageLogCallback(self.chat_id,'\U0001F6A7 LOGGING EVENT \U0001F6A7 \n[' + record.levelname + '] ' + record.message)
@@ -232,7 +233,7 @@ def newUser(username, wt_dispname = '', chat = '', log_level = 'none'):
                             'chat_id' : chat,
                             'log_level' : log_level,
                             'is_superuser' : False}
-    log.info('[CONFIG] New user added to database')
+    log.info('[CONFIG] New user ' + username + ' added to database')
     storeDatabase()
 
 def newPrivateChat(username, chat_id, langcode=os.getenv('DEFAULT_LANG'), mute='own', wt_dispname = '', log_level = 'none', wt_confirm = (os.getenv('TG_CONFIRM_DEFAULT') == 'True'), tgTOtg=True):
@@ -249,7 +250,7 @@ def newPrivateChat(username, chat_id, langcode=os.getenv('DEFAULT_LANG'), mute='
                            'wt_confirm' : wt_confirm,
                            'tg_to_tg' : tgTOtg,
                            'groupname' : ''}
-    log.info('[CONFIG] New chat-user pair added to database')
+    log.info('[CONFIG] New chat-user pair added to database. User:' + username)
     storeDatabase()
 
 def remove(chat):
@@ -298,6 +299,15 @@ def updateChat(chat, key, value):
         return
     chats[chat][key] = value
     log.debug('[CONFIG] A Chat got updated: ' + key + ' to ' + str(value))
+    storeDatabase()
+
+def updateUsername(oldUser, newUser):
+    ''' Update the username in the data base. Fixing the double link (chatID <-> user) nedds to done seperatly. '''
+    if users.get(oldUser) == None:
+        log.error('[CONFIG] Cannot change username of non-existng user ' + oldUser)
+        return
+    users[newUser] = users.pop(oldUser)
+    log.debug('[CONFIG] Changing user name from ' + oldUser + ' to ' + newUser)
     storeDatabase()
 
 def updateUserLogging(user, loglevel, updateDatabase = True):
