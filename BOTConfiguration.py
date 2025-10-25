@@ -32,7 +32,7 @@ class TelegramLoggingHandler(logging.Handler):
 
         def emit(self, record):
             ''' The function which is called on each logging event, passes the logging event to telegram using the handler which is set up by the main script'''
-            if 'cannot schedule new futures after shutdown' in record.message or 'httpx.ConnectError' in record.message: # we're logging recursive execptions, and we're probably the cause of it. break the loop! Smarter solutions will exist..
+            if 'cannot schedule new futures after shutdown' in record.message or 'httpx.ConnectError' in record.message or 'All connections in the connection pool are occupied.' in record.message: # we're logging recursive execptions, and we're probably the cause of it. break the loop! Smarter solutions will exist..
                 return
             
             if record.levelno >= self.level: # record passed the threshold
