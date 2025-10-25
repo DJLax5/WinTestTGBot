@@ -41,8 +41,8 @@ class TelegramChatManager:
             builder = builder.connection_pool_size(1024)
             builder = builder.get_updates_connection_pool_size(1024)
             builder = builder.get_updates_connect_timeout(120)
-            builder = builder.pool_timeout(5)
-            builder = builder.read_timeout(5).write_timeout(5)
+            builder = builder.pool_timeout(15)
+            builder = builder.read_timeout(15).write_timeout(15)
             self.app = builder.build()
         except Exception as e:
             cf.log.fatal('[TCM] Could not establish a connection to Telegram. Is the key correct? Exception: ' + str(e))
@@ -110,6 +110,7 @@ class TelegramChatManager:
         async def send_message(self, chatID, message):
             try:
                 await self.bot.send_message(chat_id=chatID, text=message, parse_mode='MarkdownV2')
+                await asyncio.sleep(0.1) # slight delay to avoid flooding
             except telegram.error.BadRequest as e:
                 cf.log.warning('[TCM] The message could not be sent. Reason: ' + str(e))
             except httpx.ConnectError:

@@ -98,8 +98,8 @@ class WinTestTGBot:
                     self.tcm.sendMessage(chat, chat_msg) 
                     count += 1 
             
-            if count == 25: # sending too many messages at once is not working. Just wait until we can send more! A more elegant solution may be implemented!
-                time.sleep(8)
+            if count == 5: # sending too many messages at once is not working. Just wait until we can send more! A more elegant solution may be implemented!
+                time.sleep(5)
                 count = 0 
 
 
