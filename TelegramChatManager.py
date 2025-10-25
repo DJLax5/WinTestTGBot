@@ -102,8 +102,8 @@ class TelegramChatManager:
             return
         
         message = telegram.helpers.escape_markdown(message, version=2)
-        message = message.replace('<b\\>','*', -1 if message.count('<b\\>') % 2 == 0 else (message.count('<b\\>') - 1))
-        message = message.replace('<i\\>','_', -1 if message.count('<i\\>') % 2 == 0 else (message.count('<i\\>') - 1))    
+        message = message.replace('<b>','*', -1 if message.count('<b>') % 2 == 0 else (message.count('<b>') - 1))
+        message = message.replace('<i>','_', -1 if message.count('<i>') % 2 == 0 else (message.count('<i>') - 1))    
 
         cf.log.debug('[TCM] Sending message: ' + message)
 
