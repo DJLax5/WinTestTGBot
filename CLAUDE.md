@@ -50,12 +50,27 @@ Threads at runtime:
 
 Cross-thread entry point into asyncio is `TelegramChatManager.sendMessage()`. It is
 called from the WT thread, from logging handlers (any thread) and from within
-handlers (loop thread). Anything touching the loop from a foreign thread must use
-`asyncio.run_coroutine_threadsafe` / `loop.call_soon_threadsafe`.
+handlers (loop thread). It formats, splits (4096) and hands the chunks to the loop via
+`call_soon_threadsafe`. Nothing else may touch the loop from a foreign thread.
+
+Outgoing messages: `_sendWorker` (started in `post_init`) drains per-chat FIFO queues
+round robin. `_attempt()` does exactly one `send_message` and maps every exception:
+RetryAfter -> per-chat not-before, NetworkError -> global backoff, Forbidden / chat not
+found -> chat muted and queue dropped, ChatMigrated -> `cf.updateChatId`. Items older
+than `TG_MSG_MAX_AGE` are dropped. Log records produced inside the sender carry
+`extra={'no_tg': True}` so `TelegramLoggingHandler` never forwards them (this was the
+feedback loop that flooded the chats). Connection loss/recovery is logged once each.
 
 Shared mutable state without locks: `cf.chats`, `cf.users` (mutated by TG handlers,
-iterated by the WT thread), `WinTestTGBot.stations` (written by WT thread, read by
-TG thread). Always iterate over snapshots (`list(cf.chats)`) from the WT thread.
+iterated by the WT thread). Always iterate over snapshots (`list(cf.chats.items())`)
+from the WT thread and use `.get()` for cross references. `WinTestTGBot.stations` is
+guarded by `_stationsLock` and persisted to `STATIONS_FILE_PATH` on every change,
+restored at start if younger than `WT_STATIONS_MAX_AGE`.
+
+Users are keyed by Telegram `@username`, or `id<user id>` if they have none
+(`TelegramChatManager.userKey`). All command handlers start with `_prepare()`.
+Bold headers are passed as `sendMessage(chat, text, header=...)`, never as markup in
+the text; everything is escaped for MarkdownV2 in `formatMessage()`.
 
 ## Win-Test protocol facts (as implemented)
 
@@ -84,15 +99,19 @@ TG thread). Always iterate over snapshots (`list(cf.chats)`) from the WT thread.
 python3 -m venv venv && venv/bin/pip install -r requirements.txt pytest
 cp .demoenv .env   # then edit
 venv/bin/python WinTestTGBot.py
+venv/bin/python -m pytest tests/ -q
 ```
 
-The bot needs an interface in the `BROADCAST_IP`/`WINTEST_SUBNET` subnet, otherwise
-`WinTestHandler` raises `IPNotFoundException` at startup. For tests use
-`BROADCAST_IP=127.255.255.255`, `WINTEST_SUBNET=255.0.0.0` and feed datagrams built
-with `WinTestHandler.toUDPmsg()` into `127.0.0.1:BROADCAST_PORT`.
+`tests/` runs offline: `conftest.py` sets all `.env` keys (loopback broadcast
+`127.255.255.255/255.0.0.0`, temp data dir) before the bot modules are imported,
+because `BOTConfiguration` configures itself at import time. `test_telegram.py`
+replaces `telegram.Bot.get_me` and `app.bot` with fakes and drives the send worker on
+the real event loop; `test_integration.py` starts the whole bot with a fake
+`run_polling` and feeds Win-Test datagrams via UDP. Before pushing, also run the suite
+against the oldest supported library (`pip install python-telegram-bot==20.0`).
 
-`BOTConfiguration` runs its setup at import time (reads `.env`, creates log and data
-files). Tests must set the environment variables before importing any bot module.
+The bot needs an interface in the `BROADCAST_IP`/`WINTEST_SUBNET` subnet, otherwise
+`WinTestHandler` raises `IPNotFoundException` after `WT_IP_WAIT` seconds.
 
 Runtime artefacts live in `data/` (gitignored): `wttgbot.log` (+ rotated `.N`),
-`wttgbot.json` (users and chats).
+`wttgbot.json` (+ `.bak`, users and chats), `wtstations.json` (operator list).

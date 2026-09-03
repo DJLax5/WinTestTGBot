@@ -44,6 +44,12 @@ To run the bot:
 1. Start the Telegram bot by sending `/start` to it. 
 
 Have fun!
+## AI transparency notice
+The skeleton and the working principle of this bot were designed and written by a human (DJLax5).
+Bug fixing, penetration testing and the robustness hardening (network handling, message queueing, input validation,
+persistence and the accompanying test suite) were done with the help of an AI coding assistant (Anthropic Claude),
+reviewed by the human maintainer. This notice is provided in the sense of the EU AI Act transparency obligations.
+
 ## Disclaimer
 This is a hobby project. There is no warranty whatsoever. Use at your own risk.
 
@@ -51,6 +57,11 @@ Respect the license.
 Do anything, but make sure you reference me as your source.
 You may not comercialize this bot or anything that is bulid on-top of it.
 
-## Known Bugs
-- If the system running this bot loses internet connection, messages will not be sent via telegram. The bot usually will fix itself.
-- Works only with a limited number of users (tested with 25, should work up to 50 but not tested) 
+## Robustness notes
+- Internet outages: Telegram messages are queued per chat and retried with backoff. Messages that cannot be delivered within `TG_MSG_MAX_AGE` (default 15 min) are dropped. Once the connection is back, the super-users get a single notice with the outage duration and the number of dropped messages.
+- The operator list (who is logged in at which Win-Test station) is persisted in `data/wtstations.json` and restored after a restart if it is younger than 48 h. Super-users can correct it with `/setop`, everyone can check it with `/ops`.
+- Telegram users without an @username are supported.
+- Runs on Windows and Linux (e.g. a Raspberry Pi in the station network).
+
+## Tests
+`pip install pytest` and run `pytest` in the repository root. The tests run offline, without a Telegram token or a Win-Test instance.
