@@ -32,7 +32,7 @@ class WinTestTGBot:
         ''' Start the WT Handler and the TCM '''
 
         if not self.wt.start():
-            self.log.fatal('[BOT] Could not start WinTestHandler')
+            cf.log.fatal('[BOT] Could not start WinTestHandler')
             return False
         
         self.tcm.start() # start the telegram polling      
