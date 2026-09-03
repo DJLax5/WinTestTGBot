@@ -1,29 +1,32 @@
 import BOTConfiguration as cf
 from WinTestHandler import WinTestHandler
 from TelegramChatManager import TelegramChatManager
-import os, time, threading
+import os, time, threading, datetime
 
 class WinTestTGBot:
     ''' The Main bot class. Use this to start the bot. '''
 
-    stations = {} # keep track of the stations and who is currently op where
-
     def __init__(self):
         ''' Initialize the bot, setup all pipelines '''
+        self.stations = {} # keep track of the stations and who is currently op where
+        self._stationsUpdated = 0.0
+        self._stationsLock = threading.Lock()
+        self._stationsPath = os.getenv('STATIONS_FILE_PATH', os.path.join(os.path.dirname(os.getenv('DATABASE_FILE_PATH')), 'wtstations.json'))
+        self.loadStations()
 
         try:
-            self.wt = WinTestHandler(self.incomingWTMessage, self.opChangeOnStation)  
+            self.wt = WinTestHandler(self.incomingWTMessage, self.opChangeOnStation)
         except WinTestHandler.IPNotFoundException as e: # This error is catastropic, shutdown
             quit()
 
         self.defaultLang = os.getenv('DEFAULT_LANG')
         self.wtBOTname = cf.ml.getMessage(self.defaultLang, 'BOT_STATION')
 
-        self.tcm = TelegramChatManager(self.publishMessage, self.getOPs, self.getDataDump)
+        self.tcm = TelegramChatManager(self.publishMessage, self.getOPs, self.getDataDump, self.opChangeOnStation, self.getStations)
 
         # Now as the TelegramChatManager exists successfully, give its message handler to the telegram logging handlers
         cf.messageLogCallback = self.tcm.sendMessage
-        cf.setupTGHandlers() 
+        cf.setupTGHandlers()
 
         self._stop_event = False
         cf.log.info('[BOT] Bot initialized.')
@@ -34,25 +37,17 @@ class WinTestTGBot:
         if not self.wt.start():
             cf.log.fatal('[BOT] Could not start WinTestHandler')
             return False
-        
-        self.tcm.start() # start the telegram polling      
+
+        self.tcm.start() # start the telegram polling
         try:
             while self.wt.wdFlag == True: # wait until we got a heartbeat from wintest,
                 time.sleep(0.1)
         except KeyboardInterrupt: # Need a escape option, if wintest does not send messages
             self.stop()
             return False
-        
-        # Now make the bot tell WinTest it's present
-        try:
-            self.wt.sendToWT(self.wtBOTname, cf.ml.getMessage(self.defaultLang, 'WT_BOOT_MSG'))
-        except UnicodeEncodeError as e: # There are exception, just put them into the log and be done with them
-            cf.log.error('[BOT] Cannot send power-up message to WT, Encode Error!')
-        except WinTestHandler.InvalidMessageLengthException as lm:
-            cf.log.error('[BOT] Cannot send power-up message to WT, Message Length Error!')
-        except WinTestHandler.InvalidStationLengthException as ls:        
-            cf.log.error('[BOT] Cannot send power-up message to WT, Station Length Error!')
 
+        # Now make the bot tell WinTest it's present
+        self._announce('WT_BOOT_MSG', 'power-up')
         cf.log.info('[BOT] Bot started successfully.')
         return True
 
@@ -62,17 +57,20 @@ class WinTestTGBot:
         self.tcm.stop()
         # Stop the WinTest Handler, send a goodbye message
         if self.wt.running:
-            try:
-                self.wt.sendToWT(self.wtBOTname,cf.ml.getMessage(self.defaultLang, 'WT_SHUTDOWN_MSG'))
-            except UnicodeEncodeError as e: # There are exception, just put them into the log and be done with them
-                cf.log.error('[BOT] Cannot send power-downm message to WT, Encode Error!')
-            except WinTestHandler.InvalidMessageLengthException as lm:
-                cf.log.error('[BOT] Cannot send power-down message to WT, Message Length Error!')
-            except WinTestHandler.InvalidStationLengthException as ls:        
-                cf.log.error('[BOT] Cannot send power-down message to WT, Station Length Error!')
-            self.wt.stop()
+            self._announce('WT_SHUTDOWN_MSG', 'power-down')
+        self.wt.stop()
         cf.log.info('[BOT] Bot stopped. Bye.')
 
+    def _announce(self, msgId, what):
+        ''' Send one of our own status messages into the Win-Test chat '''
+        try:
+            self.wt.sendToWT(self.wtBOTname, cf.ml.getMessage(self.defaultLang, msgId))
+        except UnicodeEncodeError:
+            cf.log.error('[BOT] Cannot send ' + what + ' message to WT, Encode Error!')
+        except WinTestHandler.InvalidMessageLengthException:
+            cf.log.error('[BOT] Cannot send ' + what + ' message to WT, Message Length Error!')
+        except WinTestHandler.InvalidStationLengthException:
+            cf.log.error('[BOT] Cannot send ' + what + ' message to WT, Station Length Error!')
 
     def incomingWTMessage(self, station, message):
         ''' If a WinTest Chat Message was captured, and parsed, handle it. Runs in the Win-Test thread, so only snapshots of the database are iterated. '''
@@ -90,11 +88,31 @@ class WinTestTGBot:
                     continue
             self.tcm.sendMessage(chat, message, header=header)
 
-
     def opChangeOnStation(self, station, call=''):
-        ''' If a OP-Change on a station was detected, mark it. To OP-OFF a station, leave the call empty.'''        
-        self.stations[station] = call
-        cf.log.debug('[BOT] Stations update: '+ str(self.stations))
+        ''' If a OP-Change on a station was detected, mark it. To OP-OFF a station, leave the call empty. Persisted, so a restart does not lose the operators. '''
+        with self._stationsLock:
+            self.stations[station] = call
+            self._stationsUpdated = time.time()
+            cf.log.debug('[BOT] Stations update: ' + str(self.stations))
+            try:
+                cf.writeJSON(self._stationsPath, {'updated': self._stationsUpdated, 'stations': self.stations})
+            except Exception as e:
+                cf.log.error('[BOT] Could not store the station file: ' + str(e))
+
+    def loadStations(self):
+        ''' Restore the operator list from the last run, unless it is older than WT_STATIONS_MAX_AGE (default 48 h). '''
+        maxAge = float(os.getenv('WT_STATIONS_MAX_AGE', str(48 * 3600)))
+        data = cf.readJSON(self._stationsPath)
+        if not isinstance(data, dict) or not isinstance(data.get('stations'), dict) or not isinstance(data.get('updated'), (int, float)):
+            cf.log.info('[BOT] No stored station list, starting empty.')
+            return
+        age = time.time() - data['updated']
+        if age > maxAge or age < 0:
+            cf.log.info('[BOT] Stored station list is ' + str(int(age / 3600)) + ' h old, ignoring it.')
+            return
+        self.stations = {str(k): str(v) for k, v in data['stations'].items()}
+        self._stationsUpdated = data['updated']
+        cf.log.info('[BOT] Restored station list from the last run: ' + str(self.stations))
 
     def publishMessage(self, origin, message):
         ''' Function to publish a message to Wintest. The return code encodes potential errors: 0 -> OK, 1 -> Encoding error, 2 -> Message too long, 3 -> Station too long'''
@@ -109,35 +127,33 @@ class WinTestTGBot:
         except WinTestHandler.InvalidMessageLengthException as lm:
             cf.log.warning('[BOT] Message could not be sent, message too long!')
             return 2
-        except WinTestHandler.InvalidStationLengthException as ls:       
-            cf.log.warning('[BOT] Message could not be sent, station name too long!') 
+        except WinTestHandler.InvalidStationLengthException as ls:
+            cf.log.warning('[BOT] Message could not be sent, station name too long!')
             return 3
-        
+
     def getOPs(self):
         ''' Extract the OPs which are currently logged in. '''
-        ops = []
-        for station in self.stations:
-            if self.stations[station] != '':
-                ops.append(self.stations[station].upper())
-        return ops
-    
+        return [call.upper() for call in list(self.stations.values()) if call != '']
+
+    def getStations(self):
+        ''' Snapshot of the station list and the time of its last change (UTC string, '' if never) '''
+        updated = datetime.datetime.utcfromtimestamp(self._stationsUpdated).strftime('%d.%m. %H:%M UTC') if self._stationsUpdated else ''
+        return dict(self.stations), updated
+
+    def stationsText(self):
+        ''' Human readable station list '''
+        stations, _ = self.getStations()
+        return '\n'.join(station + ': ' + (call if call else '-') for station, call in sorted(stations.items()))
+
     def getDataDump(self):
         ''' Dumps the current Win-Test state into a dict. (Heartbeat status and Staions/OPs) '''
-        data_dump = {'wt_heartbeat':not self.wt.wdFlag}
-        stationStr = ''
-        for station in self.stations:
-            stationStr += station
-            if self.stations[station] != '':
-                stationStr += ', OP: ' + self.stations[station]
-            stationStr += '\n'
-        data_dump['stations'] = stationStr
-        return data_dump
+        return {'wt_heartbeat': not self.wt.wdFlag, 'stations': self.stationsText() + '\n'}
 
 class StopInterrupt(threading.Event):
     ''' A dummy event which will just wait. This allows to stay the start thread present.'''
     def wait(self, timeout=None):
         wait = super().wait  # get once, use often
-        if timeout is None:            
+        if timeout is None:
             while not wait(0.1):  pass
         else:
             wait(timeout)
@@ -148,7 +164,7 @@ if __name__ == '__main__':
     bot = WinTestTGBot() # create the bot
     if bot.start(): # try to start it
         # halt the main thread to be able to capture the Keyboard interrupt
-        event = StopInterrupt()        
+        event = StopInterrupt()
         try:
             event.wait()
         except KeyboardInterrupt:

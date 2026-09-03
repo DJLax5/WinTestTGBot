@@ -30,7 +30,7 @@ class TelegramChatManager:
     CHAT_QUEUE_MAX = 200 # pending messages per chat, the oldest are dropped
     MAX_BACKOFF = 60.0
 
-    def __init__(self, messageToWThandler, getOPsHandler, getWinTestDump):
+    def __init__(self, messageToWThandler, getOPsHandler, getWinTestDump, setOPHandler=None, getStationsHandler=None):
         ''' Construct the chat manager, with an application and the basic push capability '''
         self.username = ''
         self._loop = asyncio.new_event_loop()
@@ -40,6 +40,8 @@ class TelegramChatManager:
         self.toWT = messageToWThandler
         self.getOPs = getOPsHandler
         self.getWTdump = getWinTestDump
+        self.setOP = setOPHandler
+        self.getStations = getStationsHandler
         self._thread = None
         self._loopThread = None
         self._worker = None
@@ -71,7 +73,8 @@ class TelegramChatManager:
         for cmd, handler in (('start', self.handleStart), ('verify', self.handleVerify), ('name', self.handleName), ('lang', self.handleLang),
                              ('mute', self.handleMute), ('confirm', self.handleConfirm), ('all', self.handleAll), ('sudo', self.handleSudo),
                              ('leave', self.handleLeave), ('dump', self.handleDump), ('makeleave', self.handleMakeLeave), ('muteall', self.handleMuteall),
-                             ('plebs', self.handlePlebs), ('loglevel', self.handleLoglevel), ('help', self.handleHelp)):
+                             ('plebs', self.handlePlebs), ('loglevel', self.handleLoglevel), ('help', self.handleHelp),
+                             ('ops', self.handleOps), ('setop', self.handleSetop)):
             self.app.add_handler(CommandHandler(cmd, handler, filters=notEdited))
         # And the message handlers
         self._mention = re.compile(r'^@' + re.escape(self.username) + r'(?:\s+|$)', re.IGNORECASE)
@@ -722,6 +725,38 @@ class TelegramChatManager:
         else:
             text = cf.ml.getMessage(langcode, 'HELP_PRV', vars=settings)
         await self.reply(update, esc(text) + '\n\n')
+
+    async def handleOps(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /ops commands. Shows the operators currently logged in at the Win-Test stations. '''
+        prep = await self._prepare(update)
+        if prep is None:
+            return
+        chat_id, user, langcode = prep
+        stations, updated = self.getStations() if self.getStations else ({}, '')
+        if not stations:
+            text = cf.ml.getMessage(langcode, 'OPS_NONE')
+        else:
+            lines = '\n'.join(station + ': ' + (call if call else '-') for station, call in sorted(stations.items()))
+            text = cf.ml.getMessage(langcode, 'OPS_LIST', vars={'stations': lines, 'updated': updated})
+        await self.reply(update, esc(text))
+
+    async def handleSetop(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        ''' Handle /setop STATION [CALL] commands. Super-users can correct the operator list if a Win-Test login was missed. '''
+        prep = await self._prepare(update, superuser=True)
+        if prep is None:
+            return
+        chat_id, user, langcode = prep
+        if self.setOP is None or context.args == []:
+            text = cf.ml.getMessage(langcode, 'SETOP_SYNTAX')
+        else:
+            station = context.args[0]
+            stations = self.getStations()[0] if self.getStations else {}
+            station = next((s for s in stations if s.lower() == station.lower()), station) # keep the spelling Win-Test uses
+            call = ' '.join(context.args[1:]).upper()
+            self.setOP(station, call)
+            cf.log.info('[TCM] Super-user ' + user + ' set the operator of ' + station + ' to ' + (call if call else 'nobody'))
+            text = cf.ml.getMessage(langcode, 'SETOP_SET' if call else 'SETOP_CLEARED', vars={'station': station, 'call': call})
+        await self.reply(update, esc(text))
 
     async def handleMigrate(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         ''' A group chat was converted to a supergroup, telegram assigns a new chat id '''
