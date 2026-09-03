@@ -75,32 +75,20 @@ class WinTestTGBot:
 
 
     def incomingWTMessage(self, station, message):
-        ''' If a WinTest Chat Message was captured, and parsed, handle it. '''
-        chat_msg = '<b>' + station + ((' / ' + self.stations[station]) if self.stations.get(station) else '') + '<b>'
-        chat_msg += ':\n'
-        chat_msg += message
-        
-        if not self.stations.get(station): # we don't know this station yet. Treat it with no operators.
+        ''' If a WinTest Chat Message was captured, and parsed, handle it. Runs in the Win-Test thread, so only snapshots of the database are iterated. '''
+        op = self.stations.get(station)
+        if op is None: # we don't know this station yet. Treat it with no operators.
             self.opChangeOnStation(station)
-
-        count = 0
-        # go over each chat
-        for chat in cf.chats:
-
-            if cf.chats[chat]['valid'] == False: # skip uinvalid chats
+        header = station + (' / ' + op if op else '')
+        ops = self.getOPs()
+        for chat, data in list(cf.chats.items()):
+            if data['valid'] == False or data['mute'] == 'all':
                 continue
-            # All unmuted chats and chats which are not the current operator get notified
-            if cf.chats[chat]['mute'] == 'none':
-                self.tcm.sendMessage(chat, chat_msg)
-                count += 1 
-            elif cf.chats[chat]['is_private'] == True and cf.chats[chat]['mute'] == 'own':
-                if not (cf.users[cf.chats[chat]['user']]['wt_dispname'].upper() in self.getOPs()): # filter if OPs requested not to receive messages:
-                    self.tcm.sendMessage(chat, chat_msg) 
-                    count += 1 
-            
-            if count == 5: # sending too many messages at once is not working. Just wait until we can send more! A more elegant solution may be implemented!
-                time.sleep(5)
-                count = 0 
+            if data['mute'] == 'own' and data['is_private'] == True: # the current operators asked not to receive messages
+                user = cf.users.get(data['user'])
+                if user and user['wt_dispname'].upper() in ops:
+                    continue
+            self.tcm.sendMessage(chat, message, header=header)
 
 
     def opChangeOnStation(self, station, call=''):

@@ -24,6 +24,7 @@
     "NAME_SYNTAX_UNAME" : "Tut mir leid, das hat nicht funktioniert.\nDie korrekte Syntax für diesen Befehl ist /name [NAME].\nIch habe versucht deinen Telegram Benutzernamen [uname] zu verwenden, dieser überschreitet allerdings das Zeichenlimit von [charlim] Zeichen. Bitte versuche es erneut.",
     "NAME_SET_SUCCESS" : "Danke.\nDu wirst von nun an in Win-Test als [dispname] angezeigt.",
     "NAME_SET_FAILED" : "Tut mir leid, das hat nicht funktioniert.\nDein vorgeschlagener Name überschreitet das Zeichenlimit von [charlim] Zeichen. Bitte versuche es erneut.",
+    "NAME_ENCODING_FAILED" : "Das hat leider nicht funktioniert. Dein Win-Test Anzeigename darf nur Buchstaben des erweiterten lateinischen Alphabets enthalten (keine Emojis). Bitte versuche es erneut.",
     "LANG_SYNTAX" : "Tut mir leid, das hat nicht funktioniert.\nDie korrekte Syntax lautet /lang [LANGUAGE_CODE]\nWobei [LANGUAGE_CODE] für eine der folgenden Sprachen stehen kann:\n[languages]",
     "LANG_SUCCESS" : "In Ordnung, ich werde von nun an deutsch mit dir sprechen.",
     "LANG_NOT_FOUND" : "Tut mir leid, das hat nicht funktioniert.\nIch konnte die von dir geforderte Sprache leider nicht finden.\nDie korrekte Syntax lautet /lang [LANGUAGE_CODE]\nWobei [LANGUAGE_CODE] für eine der folgenden Sprachen stehen kann:\n[languages]",

@@ -24,6 +24,7 @@
     "NAME_SYNTAX_UNAME" : "Sorry, the correct syntax for this command is /name [NAME]\nI've tried to use your Telegram username [uname], but that failed. There is a character limit of [charlim] characters.",
     "NAME_SET_SUCCESS" : "Great thanks. Your messages will look in Win-Test as originating from [dispname].",
     "NAME_SET_FAILED" : "Sorry that did not work. There is a character limit of [charlim] characters. Please try again.",
+    "NAME_ENCODING_FAILED" : "Sorry that did not work. Your Win-Test display name may only contain letters of the extended latin alphabet (no emojis). Please try again.",
     "LANG_SYNTAX" : "Sorry, that did not work.\nThe correct syntax for this command is /lang [LANGUAGE_CODE]\nWhere [LANGUAGE_CODE] is one of the following languages:\n[languages]",
     "LANG_SUCCESS" : "Ok, from now on, I will communicate in english with you.",
     "LANG_NOT_FOUND" : "Sorry, that did not work.\nThe language you stated is not installed.\nThe correct syntax for this command is /lang [LANGUAGE_CODE]\nWhere [LANGUAGE_CODE] is one of the following languages:\n[languages]",
