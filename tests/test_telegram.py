@@ -176,11 +176,11 @@ def test_forbidden_mutes_chat_and_drops_queue(running, fresh_db):
     cf.newPrivateChat('alice', '9')
     cf.updateChat('9', 'mute', 'none')
     running.fake.errors['9'] = [Forbidden('bot was blocked by the user')]
-    running.sendMessage('9', 'one')
-    running.sendMessage('9', 'two')
+    # queue both in one loop callback, otherwise 'two' can arrive after the drop and is legitimately sent
+    running._loop.call_soon_threadsafe(lambda: (running.sendMessage('9', 'one'), running.sendMessage('9', 'two')))
     assert wait_for(lambda: cf.chats['9']['mute'] == 'all')
     time.sleep(0.2)
-    assert running.fake.sent == [] and '9' not in running._pending
+    assert running.fake.sent == [] and running.fake.calls == 1 and '9' not in running._pending
 
 
 def test_bad_request_chat_not_found(running, fresh_db):
