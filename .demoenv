@@ -22,3 +22,8 @@ WT_CALL_PREFIX="" # Prefix added to user calls
 WT_CALL_SUFFIX="/TG" # Suffix added to user calls
 WT_WD_TIMEOUT=120 # Wintest Heartbeat Watchdog Timeout in seconds
 TG_CONFIRM_DEFAULT="True" # Defines weather the bot confirms sucessfull messages by default
+# Optional keys, the defaults are used when they are missing
+WT_IP_WAIT=120 # Seconds to wait at startup for an interface in the Win-Test subnet (autostart before the network is up)
+TG_MSG_MAX_AGE=900 # Telegram messages which could not be delivered within this time (seconds) are dropped
+STATIONS_FILE_PATH="data/wtstations.json" # Where the current station/operator list is persisted
+WT_STATIONS_MAX_AGE=172800 # The stored operator list is only restored if it is younger than this (seconds, default 48h)

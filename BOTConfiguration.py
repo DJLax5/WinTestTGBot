@@ -4,7 +4,7 @@ import os, sys
 from dotenv import load_dotenv
 load_dotenv() # load the .env keys
 import logging
-import json, re, datetime, threading
+import json, re, datetime, threading, time
 from MuliLanguageMessages import MulitLanguageMessages
 
 
@@ -14,6 +14,7 @@ class TelegramLoggingHandler(logging.Handler):
             '''Store the target chat_id and log level for this instance'''
             super().__init__()
             self.chat_id = chat_id
+            self._windowStart, self._sent, self._suppressed = 0.0, 0, 0
             try:
                 self.level = int(level) # try to get the level, revert to 'ERROR' if it fails
             except:
@@ -30,137 +31,110 @@ class TelegramLoggingHandler(logging.Handler):
                 log.error('[TLH] Could not determine the logging-level for telegram messages. Default: ERROR')
             log.debug('[TLH] Logging level updated to '+ str(newlevel))
 
+        RATE_WINDOW = 60.0 # seconds
+        RATE_LIMIT = 10 # max. log messages per window and handler, the rest is summarized
+
         def emit(self, record):
             ''' The function which is called on each logging event, passes the logging event to telegram using the handler which is set up by the main script'''
-            if 'cannot schedule new futures after shutdown' in record.message or 'httpx.ConnectError' in record.message or 'All connections in the connection pool are occupied.' in record.message: # we're logging recursive execptions, and we're probably the cause of it. break the loop! Smarter solutions will exist..
+            if record.levelno < self.level or messageLogCallback is None:
                 return
-            
-            if record.levelno >= self.level: # record passed the threshold
-                try:
-                    messageLogCallback(self.chat_id,'\U0001F6A7 LOGGING EVENT \U0001F6A7 \n[' + record.levelname + '] ' + record.message)
-                except: # this exception is not needed, the error is logged anyways
-                    pass
+            if getattr(record, 'no_tg', False): # records from the telegram sender itself, forwarding them would loop
+                return
+            now = time.time()
+            if now - self._windowStart > self.RATE_WINDOW:
+                if self._suppressed:
+                    messageLogCallback(self.chat_id, '\U0001F6A7 LOGGING EVENT \U0001F6A7 \n' + str(self._suppressed) + ' further log messages were not forwarded.')
+                self._windowStart, self._sent, self._suppressed = now, 0, 0
+            if self._sent >= self.RATE_LIMIT:
+                self._suppressed += 1
+                return
+            self._sent += 1
+            try:
+                messageLogCallback(self.chat_id, '\U0001F6A7 LOGGING EVENT \U0001F6A7 \n[' + record.levelname + '] ' + record.getMessage())
+            except Exception: # this exception is not needed, the error is logged anyways
+                pass
 
+
+def readJSON(path):
+    ''' Read a json file, falling back to its .bak copy if the file is missing or damaged. Returns None if neither is usable. '''
+    for candidate in (path, path + '.bak'):
+        try:
+            with open(candidate, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            continue
+        except Exception as e:
+            log.error('[CONFIG] Cannot read ' + candidate + ': ' + str(e))
+    return None
+
+def writeJSON(path, data):
+    ''' Atomically write a json file: write a temp file, keep the previous version as .bak and rename. A crash never leaves a truncated file behind. '''
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+    if os.path.exists(path):
+        os.replace(path, path + '.bak')
+    os.replace(tmp, path)
 
 def loadDatabase():
     ''' Function used to load the userdata'''
-    
-    # load the json data
-    try:
-        os.makedirs(os.path.dirname(os.getenv('DATABASE_FILE_PATH')), exist_ok=True) # on first start, make sure all the paths are ok
-        with open(os.getenv('DATABASE_FILE_PATH')) as f:
-            data = json.loads(f.read())
-        if data.get('chats') != None and data.get('users') != None: # check the format
-            log.info('[CONFIG] Confdiguration found and loaded')
-            return data['chats'], data['users']
-        else:
-            log.warning('[CONFIG] The user data is not present. If this is the first start of the bot, this is expected.')
-            return {}, {}
-    except Exception as e:
-        log.warning('[CONFIG] The user data is not present. If this is the first start of the bot, this is expected.')
-        return {}, {}
+    path = os.getenv('DATABASE_FILE_PATH')
+    os.makedirs(os.path.dirname(path) or '.', exist_ok=True) # on first start, make sure all the paths are ok
+    data = readJSON(path)
+    if isinstance(data, dict) and isinstance(data.get('chats'), dict) and isinstance(data.get('users'), dict):
+        log.info('[CONFIG] Configuration found and loaded')
+        return data['chats'], data['users']
+    log.warning('[CONFIG] The user data is not present. If this is the first start of the bot, this is expected.')
+    return {}, {}
 
 def storeDatabase():
-    ''' Function to store updates to the database on the harddrive. '''
-    try:
-        data = {}
-        data['users'] = users
-        data['chats'] = chats
-        with open(os.getenv('DATABASE_FILE_PATH'), 'w') as f:
-            f.write(json.dumps(data))
-        log.debug('[CONFIG] Database file updated.')
-    except Exception as e:
-        log.error('[CONFIG] Writing data file failed. Reason: ' + str(e))
+    ''' Function to store updates to the database on the harddrive. Thread safe. '''
+    with _dbLock:
+        try:
+            writeJSON(os.getenv('DATABASE_FILE_PATH'), {'users': users, 'chats': chats})
+            log.debug('[CONFIG] Database file updated.')
+        except Exception as e:
+            log.error('[CONFIG] Writing data file failed. Reason: ' + str(e))
+
+CHAT_DEFAULTS = {'langcode': lambda c: os.getenv('DEFAULT_LANG'), 'valid': lambda c: False, 'mute': lambda c: 'none' if c['is_private'] == False else 'own',
+                 'user': lambda c: '', 'wt_confirm': lambda c: True, 'tg_to_tg': lambda c: True, 'groupname': lambda c: ''}
+USER_DEFAULTS = {'wt_dispname': lambda u: '', 'chat_id': lambda u: '', 'log_level': lambda u: 'none', 'is_superuser': lambda u: False}
 
 def checkDatabase(chats, users, modified = False):
-    ''' Check the database integity. Also good to insert new attributes into existing instances after an update. '''    
-    for chat in chats:
-        if chats[chat].get('langcode') == None:
-            chats[chat]['langcode'] = os.getenv('DEFAULT_LANG')
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing langcode. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        if chats[chat].get('valid') == None:
-            chats[chat]['valid'] = False
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing validation. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        if chats[chat].get('is_private') == None:
+    ''' Check the database integity. Also good to insert new attributes into existing instances after an update. '''
+    for chat in list(chats):
+        if not isinstance(chats[chat], dict) or chats[chat].get('is_private') == None:
             chats.pop(chat)
             modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing private tag. Deleting this chat.')
-            return checkDatabase(chats, users, modified)
-            
-        if chats[chat].get('mute') == None:
-            chats[chat]['mute'] = 'none' if chats[chat]['is_private'] == False else 'own'
+            log.warning('[CONFIG] Database integrity compromised, missing private tag. Deleting this chat.')
+            continue
+        for key, default in CHAT_DEFAULTS.items():
+            if chats[chat].get(key) == None:
+                chats[chat][key] = default(chats[chat])
+                modified = True
+                log.warning('[CONFIG] Database integrity compromised, missing ' + key + ' tag. Restoring to default.')
+    for user in list(users):
+        if not isinstance(users[user], dict):
+            users.pop(user)
             modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing mute tag. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        if chats[chat].get('user') == None:
+            log.warning('[CONFIG] Database integrity compromised, invalid user entry. Deleting this user.')
+            continue
+        for key, default in USER_DEFAULTS.items():
+            if users[user].get(key) == None:
+                users[user][key] = default(users[user])
+                modified = True
+                log.warning('[CONFIG] Database integrity compromised, missing ' + key + ' tag. Restoring to default.')
+    # cross references
+    for chat in chats:
+        if chats[chat]['user'] != '' and users.get(chats[chat]['user']) == None:
             chats[chat]['user'] = ''
             modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing user tag. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        elif chats[chat]['user'] != '' and users.get(chats[chat]['user']) == None:
-            chats[chat]['user'] = ''
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, referenced user non existing. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        if chats[chat].get('wt_confirm') == None:
-            chats[chat]['wt_confirm'] = True
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing wt_confirm tag. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        if chats[chat].get('tg_to_tg') == None:
-            chats[chat]['tg_to_tg'] = True
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing tg_to_tg tag. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-        
-        if chats[chat].get('groupname') == None:
-            chats[chat]['groupname'] = ''
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing groupname tag. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-
+            log.warning('[CONFIG] Database integrity compromised, referenced user non existing. Restoring to default.')
     for user in users:
-        if users[user].get('wt_dispname') == None:
-            users[user]['wt_dispname'] = ''
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing wt_dispname tag. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        if users[user].get('chat_id') == None:
+        if users[user]['chat_id'] != '' and chats.get(users[user]['chat_id']) == None:
             users[user]['chat_id'] = ''
             modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing chat_id tag. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        elif users[user]['chat_id'] != '' and chats.get(users[user]['chat_id']) == None:
-            users[user]['chat_id'] = ''
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, user is referncing non-existing chat. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        if users[user].get('log_level') == None:
-            users[user]['log_level'] = 'none'
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing log_level tag. Restoring to default.')
-            return checkDatabase(chats, users, modified)
-            
-        if users[user].get('is_superuser') == None:
-            users[user]['is_superuser'] = False
-            modified = True
-            log.warning('[CONFIG] Database integretry compromised, missing is_superuser tag. Restoring to default.')
-            return checkDatabase(chats, users, modified)           
-
+            log.warning('[CONFIG] Database integrity compromised, user is referencing non-existing chat. Restoring to default.')
     return chats, users, modified
 
         
@@ -262,7 +236,7 @@ def remove(chat):
     if chats[chat]['is_private'] == True:
         user = chats[chat]['user']
         log.info('[CONFIG] User ' + user + ' was removed.')
-        users.pop(user)
+        users.pop(user, None)
     chats.pop(chat)
     log.info('[CONFIG] Chat was removed.')
     storeDatabase()
@@ -308,6 +282,18 @@ def updateUsername(oldUser, newUser):
         return
     users[newUser] = users.pop(oldUser)
     log.debug('[CONFIG] Changing user name from ' + oldUser + ' to ' + newUser)
+    storeDatabase()
+
+def updateChatId(oldChat, newChat):
+    ''' Move a chat to a new id (telegram group to supergroup migration), fixing the user back reference. '''
+    if chats.get(oldChat) == None:
+        log.error('[CONFIG] Cannot migrate non-existing chat ' + oldChat)
+        return
+    chats[newChat] = chats.pop(oldChat)
+    for user in users:
+        if users[user]['chat_id'] == oldChat:
+            users[user]['chat_id'] = newChat
+    log.info('[CONFIG] Chat ' + oldChat + ' migrated to ' + newChat)
     storeDatabase()
 
 def updateUserLogging(user, loglevel, updateDatabase = True):
@@ -363,7 +349,8 @@ def handleUncaughtException(exc_type, exc_value, exc_traceback):
 # Run the confiuration, will be executed on first import, only once
 # Logging
 messageLogCallback = None # This needs to be set bevor initializing the Telegram logging handlers
-telegramLogHandlers = {} # Store the handlers 
+telegramLogHandlers = {} # Store the handlers
+_dbLock = threading.Lock()
 log = setupLogging()
 sys.excepthook = handleUncaughtException # store generic exception handler
 threading.excepthook = handleUncaughtException
