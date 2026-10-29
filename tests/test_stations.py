@@ -1,4 +1,4 @@
-import os, time, threading, json
+import os, time, threading, json, logging
 from types import SimpleNamespace
 import pytest
 import BOTConfiguration as cf
@@ -102,3 +102,49 @@ def test_ops_and_setop_commands(tcm, fresh_db, path):
     assert 'MULT: DL2XYZ' in text and 'RUN1: \\-' in text and 'UTC' in text
     run_async(tcm, tcm.handleHelp(up, ctx()))
     assert '/setop' in up.effective_message.replies[-1][0]
+
+
+def test_op_is_only_at_one_station(path):
+    bot = make_bot(path)
+    bot.opChangeOnStation('RUN1', 'DL1ABC')
+    bot.opChangeOnStation('MULT', 'DL2XYZ')
+    bot.opChangeOnStation('RUN2', 'dl1abc') # no LOGOUT from RUN1 by Win-Test
+    assert bot.stations == {'RUN1': '', 'MULT': 'DL2XYZ', 'RUN2': 'dl1abc'} and bot.getOPs() == ['DL2XYZ', 'DL1ABC']
+    assert json.load(open(path))['stations'] == bot.stations
+    bot.opChangeOnStation('RUN2', 'dl1abc') # relogin at the same station
+    bot.opChangeOnStation('RUN1', 'DL2XYZ')
+    assert bot.stations == {'RUN1': 'DL2XYZ', 'MULT': '', 'RUN2': 'dl1abc'}
+    bot.opChangeOnStation('RUN2')
+    assert bot.getOPs() == ['DL2XYZ']
+
+
+def test_setop_moves_op_without_ml_warnings(tcm, fresh_db, path, caplog):
+    caplog.set_level(logging.DEBUG, logger='BOTConfiguration')
+    bot = make_bot(path)
+    tcm.setOP, tcm.getStations = bot.opChangeOnStation, bot.getStations
+    up = fake_update(11, user_id=11, username='su2')
+    run_async(tcm, tcm.handleStart(up, ctx()))
+    run_async(tcm, tcm.handleVerify(up, ctx('secret')))
+    cf.updateUser('su2', 'is_superuser', True)
+    run_async(tcm, tcm.handleSetop(up, ctx('RUN1', 'dl1abc')))
+    run_async(tcm, tcm.handleSetop(up, ctx('MULT', 'DL1ABC')))
+    assert bot.stations == {'RUN1': '', 'MULT': 'DL1ABC'}
+    run_async(tcm, tcm.handleSetop(up, ctx('MULT')))
+    assert bot.stations == {'RUN1': '', 'MULT': ''}
+    assert not [r for r in caplog.records if '[ML]' in r.getMessage()]
+
+
+def test_rejected_user_input_is_not_a_warning(path, caplog):
+    from WinTestHandler import WinTestHandler
+    caplog.set_level(logging.DEBUG, logger='BOTConfiguration')
+    bot = make_bot(path)
+    def send(origin, msg):
+        if len(msg) > 79:
+            raise WinTestHandler.InvalidMessageLengthException()
+        msg.encode('cp1252')
+    bot.wt = SimpleNamespace(wdFlag=False, sendToWT=send)
+    assert bot.publishMessage('DL1ABC/TG', 'x' * 80) == 2
+    assert bot.publishMessage('DL1ABC/TG', '\U0001F600') == 1
+    assert bot.publishMessage('DL1ABC/TG', 'ok') == 0
+    assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+    assert '80 > 79' in caplog.text

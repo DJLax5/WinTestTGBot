@@ -307,3 +307,16 @@ def test_anonymous_sender_is_ignored(tcm, fresh_db):
 def test_station_too_long_error_path(tcm, fresh_db):
     tcm.wt.status = 3
     assert 'too long' in tcm._forwardToWT('X' * 20, 'msg', 'en')
+
+
+def test_name_messages_without_ml_warnings(tcm, fresh_db, caplog):
+    caplog.set_level(logging.DEBUG, logger='BOTConfiguration')
+    up = fake_update(7, user_id=7, username='averyveryverylongusername')
+    run_async(tcm, tcm.handleStart(up, ctx()))
+    run_async(tcm, tcm.handleVerify(up, ctx('secret')))
+    for args in (('DL1ABC',), ('X' * 40,), ()):
+        run_async(tcm, tcm.handleName(up, ctx(*args)))
+    up = fake_update(7, user_id=7, username='dl7xyz')
+    run_async(tcm, tcm.handleName(up, ctx()))
+    assert cf.users['dl7xyz']['wt_dispname'] == 'DL7XYZ'
+    assert not [r for r in caplog.records if '[ML]' in r.getMessage()]

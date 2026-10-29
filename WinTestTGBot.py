@@ -89,8 +89,13 @@ class WinTestTGBot:
             self.tcm.sendMessage(chat, message, header=header)
 
     def opChangeOnStation(self, station, call=''):
-        ''' If a OP-Change on a station was detected, mark it. To OP-OFF a station, leave the call empty. Persisted, so a restart does not lose the operators. '''
+        ''' If a OP-Change on a station was detected, mark it. To OP-OFF a station, leave the call empty. An OP can only be logged in at one station, a login elsewhere logs him off at the old station (Win-Test sends no LOGOUT then). Persisted, so a restart does not lose the operators. '''
         with self._stationsLock:
+            if call:
+                for other, op in list(self.stations.items()):
+                    if other != station and op.upper() == call.upper():
+                        self.stations[other] = ''
+                        cf.log.info('[BOT] OP ' + call + ' moved from station ' + other + ' to ' + station + ', ' + other + ' has no operator now.')
             self.stations[station] = call
             self._stationsUpdated = time.time()
             cf.log.debug('[BOT] Stations update: ' + str(self.stations))
@@ -121,11 +126,11 @@ class WinTestTGBot:
             self.wt.sendToWT(origin,message)
             cf.log.info('[BOT] Message from ' + origin + ' sent to Win-Test: ' + message)
             return 0
-        except UnicodeEncodeError as e: # There are exception, origin of this message
-            cf.log.warning('[BOT] Message could not be sent, encoding error!')
+        except UnicodeEncodeError as e: # user input, the sender is told by the TCM
+            cf.log.info('[BOT] Message from ' + origin + ' not sent to Win-Test, encoding error.')
             return 1
-        except WinTestHandler.InvalidMessageLengthException as lm:
-            cf.log.warning('[BOT] Message could not be sent, message too long!')
+        except WinTestHandler.InvalidMessageLengthException as lm: # user input, the sender is told by the TCM
+            cf.log.info('[BOT] Message from ' + origin + ' not sent to Win-Test, too long (' + str(len(message)) + ' > ' + os.getenv('WT_MSG_LIMIT') + ' chars).')
             return 2
         except WinTestHandler.InvalidStationLengthException as ls:
             cf.log.warning('[BOT] Message could not be sent, station name too long!')
@@ -137,7 +142,7 @@ class WinTestTGBot:
 
     def getStations(self):
         ''' Snapshot of the station list and the time of its last change (UTC string, '' if never) '''
-        updated = datetime.datetime.utcfromtimestamp(self._stationsUpdated).strftime('%d.%m. %H:%M UTC') if self._stationsUpdated else ''
+        updated = datetime.datetime.fromtimestamp(self._stationsUpdated, datetime.timezone.utc).strftime('%d.%m. %H:%M UTC') if self._stationsUpdated else ''
         return dict(self.stations), updated
 
     def stationsText(self):
