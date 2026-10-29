@@ -479,10 +479,10 @@ class TelegramChatManager:
         if context.args == []: # if no name is specified, we'll try to use the TG username
             tguser = update.effective_user
             dispname = (tguser.username or tguser.first_name or '').upper()
-            okMsg, failMsg = 'NAME_SET_USERNAME', 'NAME_SYNTAX_UNAME'
+            okMsg, failMsg, okVars, failVars = 'NAME_SET_USERNAME', 'NAME_SYNTAX_UNAME', {'uname': dispname}, {'uname': dispname, 'charlim': charlim}
         else:
             dispname = ' '.join(context.args).upper()
-            okMsg, failMsg = 'NAME_SET_SUCCESS', 'NAME_SET_FAILED'
+            okMsg, failMsg, okVars, failVars = 'NAME_SET_SUCCESS', 'NAME_SET_FAILED', {'dispname': dispname}, {'charlim': charlim}
         try:
             dispname.encode('cp1252')
             encodable = '\x00' not in dispname
@@ -492,10 +492,10 @@ class TelegramChatManager:
             text = cf.ml.getMessage(langcode, 'NAME_ENCODING_FAILED')
         elif 0 < len(dispname) <= charlim:
             cf.updateUser(user, 'wt_dispname', dispname)
-            text = cf.ml.getMessage(langcode, okMsg, vars={'uname': dispname, 'dispname': dispname})
+            text = cf.ml.getMessage(langcode, okMsg, vars=okVars)
             cf.log.info('[TCM] User ' + user + ' updated its Win-Test display name to ' + dispname)
         else:
-            text = cf.ml.getMessage(langcode, failMsg, vars={'uname': dispname, 'charlim': charlim})
+            text = cf.ml.getMessage(langcode, failMsg, vars=failVars)
         await self.reply(update, esc(text))
 
     async def handleLang(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -755,7 +755,7 @@ class TelegramChatManager:
             call = ' '.join(context.args[1:]).upper()
             self.setOP(station, call)
             cf.log.info('[TCM] Super-user ' + user + ' set the operator of ' + station + ' to ' + (call if call else 'nobody'))
-            text = cf.ml.getMessage(langcode, 'SETOP_SET' if call else 'SETOP_CLEARED', vars={'station': station, 'call': call})
+            text = cf.ml.getMessage(langcode, 'SETOP_SET', vars={'station': station, 'call': call}) if call else cf.ml.getMessage(langcode, 'SETOP_CLEARED', vars={'station': station})
         await self.reply(update, esc(text))
 
     async def handleMigrate(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

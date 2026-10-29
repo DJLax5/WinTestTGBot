@@ -77,6 +77,8 @@ the text; everything is escaped for MarkdownV2 in `formatMessage()`.
 - Datagram: ASCII payload + 1 checksum byte + 0x00. Checksum = (sum(bytes) | 128) % 256.
 - `GAB: "FROM" "TO" "TEXT"` chat message. Empty TO = broadcast. Only broadcasts are relayed.
 - `LOGIN: "STATION" "..." "CALL" "..."` / `LOGOUT: "STATION" "..."` -> op tracking.
+  An op switching stations only produces a `LOGIN` at the new station, no `LOGOUT` at
+  the old one. `opChangeOnStation` therefore clears the call from every other station.
 - Escaping: `\\`, `\"`, bytes > 127 as `\ooo` octal (latin-1), `\200` = euro sign.
 - Limits from `.env`: `WT_STN_LIMIT` (10), `WT_MSG_LIMIT` (79), checked before escaping.
 - Own broadcasts are echoed back; `_ownMessages` filters the last 5 sent datagrams.
